@@ -121,7 +121,8 @@ def workspace_member_properties(apps, schema_editor):
     updated_workspace_members = []
     for obj in WorkspaceMemberModel.objects.all():
         obj.view_props["properties"]["start_date"] = True
-        obj.default_props["properties"]["start_date"] = True
+        if obj.default_props.get("properties"):
+            obj.default_props["properties"]["start_date"] = True
         updated_workspace_members.append(obj)
 
     WorkspaceMemberModel.objects.bulk_update(
