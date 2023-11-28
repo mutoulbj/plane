@@ -4,10 +4,10 @@ import { observer } from "mobx-react-lite";
 import { useMobxStore } from "lib/mobx/store-provider";
 // components
 import { ProjectCard } from "components/project";
-import { EmptyState } from "components/common";
+import { EmptyState } from "components/project/empty-state";
 import { Loader } from "@plane/ui";
 // images
-import emptyProject from "public/empty-state/project.svg";
+import emptyProject from "public/empty-state/Project_full_screen.svg";
 // icons
 import { Plus } from "lucide-react";
 
@@ -18,7 +18,7 @@ export interface IProjectCardList {
 export const ProjectCardList: FC<IProjectCardList> = observer((props) => {
   const { workspaceSlug } = props;
   // store
-  const { project: projectStore } = useMobxStore();
+  const { project: projectStore, commandPalette: commandPaletteStore, trackEvent: { setTrackElement } } = useMobxStore();
 
   const projects = workspaceSlug ? projectStore.projects[workspaceSlug.toString()] : null;
 
@@ -38,27 +38,29 @@ export const ProjectCardList: FC<IProjectCardList> = observer((props) => {
   return (
     <>
       {projects.length > 0 ? (
-        <div className="h-full p-8 overflow-y-auto">
-          <div className="grid grid-cols-1 gap-9 md:grid-cols-2 lg:grid-cols-3">
-            {projectStore.searchedProjects.map((project) => (
-              <ProjectCard key={project.id} project={project} />
-            ))}
-          </div>
+        <div className="h-full w-full p-8 overflow-y-auto">
+          {projectStore.searchedProjects.length == 0 ? (
+            <div className="w-full text-center text-custom-text-400 mt-10">No matching projects</div>
+          ) : (
+            <div className="grid grid-cols-1 gap-9 md:grid-cols-2 lg:grid-cols-3">
+              {projectStore.searchedProjects.map((project) => (
+                <ProjectCard key={project.id} project={project} />
+              ))}
+            </div>
+          )}
         </div>
       ) : (
         <EmptyState
           image={emptyProject}
-          title="No projects yet"
-          description="Get started by creating your first project"
+          title="Why no fly 😔"
+          description="Let’s take off, cap’n!"
           primaryButton={{
             icon: <Plus className="h-4 w-4" />,
-            text: "New Project",
+            text: "Start something new",
             onClick: () => {
-              const e = new KeyboardEvent("keydown", {
-                key: "p",
-              });
-              document.dispatchEvent(e);
-            },
+              setTrackElement("PROJECTS_EMPTY_STATE");
+              commandPaletteStore.toggleCreateProjectModal(true)
+            }
           }}
         />
       )}

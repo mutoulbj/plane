@@ -17,13 +17,14 @@ type Props = {
 export const SpreadsheetDueDateColumn: React.FC<Props> = ({ issue, onChange, expandedIssues, disabled }) => {
   const isExpanded = expandedIssues.indexOf(issue.id) > -1;
 
-  const { subIssues, isLoading } = useSubIssue(issue.project_detail.id, issue.id, isExpanded);
+  const { subIssues, isLoading } = useSubIssue(issue.project_detail?.id, issue.id, isExpanded);
 
   return (
     <>
       <ViewDueDateSelect
         issue={issue}
         onChange={(val) => onChange({ target_date: val })}
+        className="flex items-center px-2.5 py-1 !h-full !w-full max-w-full"
         noBorder
         disabled={disabled}
       />

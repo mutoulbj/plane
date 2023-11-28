@@ -5,6 +5,7 @@ import { HeaderGroupByCard } from "./group-by-card";
 import { HeaderSubGroupByCard } from "./sub-group-by-card";
 // emoji helper
 import { renderEmoji } from "helpers/emoji.helper";
+import { EProjectStore } from "store/command-palette.store";
 
 export interface IProjectHeader {
   column_id: string;
@@ -15,6 +16,8 @@ export interface IProjectHeader {
   issues_count: number;
   kanBanToggle: any;
   handleKanBanToggle: any;
+  disableIssueCreation?: boolean;
+  currentStore?: EProjectStore;
 }
 
 const Icon = ({ emoji }: any) => <div className="w-6 h-6">{renderEmoji(emoji)}</div>;
@@ -29,6 +32,8 @@ export const ProjectHeader: FC<IProjectHeader> = observer((props) => {
     issues_count,
     kanBanToggle,
     handleKanBanToggle,
+    disableIssueCreation,
+    currentStore,
   } = props;
 
   const project = column_value ?? null;
@@ -55,6 +60,9 @@ export const ProjectHeader: FC<IProjectHeader> = observer((props) => {
             count={issues_count}
             kanBanToggle={kanBanToggle}
             handleKanBanToggle={handleKanBanToggle}
+            issuePayload={{ project: project?.id }}
+            disableIssueCreation={disableIssueCreation}
+            currentStore={currentStore}
           />
         ))}
     </>

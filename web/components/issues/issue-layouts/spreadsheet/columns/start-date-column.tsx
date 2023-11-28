@@ -17,13 +17,14 @@ type Props = {
 export const SpreadsheetStartDateColumn: React.FC<Props> = ({ issue, onChange, expandedIssues, disabled }) => {
   const isExpanded = expandedIssues.indexOf(issue.id) > -1;
 
-  const { subIssues, isLoading } = useSubIssue(issue.project_detail.id, issue.id, isExpanded);
+  const { subIssues, isLoading } = useSubIssue(issue.project_detail?.id, issue.id, isExpanded);
 
   return (
     <>
       <ViewStartDateSelect
         issue={issue}
         onChange={(val) => onChange({ start_date: val })}
+        className="flex items-center px-2.5 py-1 !h-full !w-full max-w-full"
         noBorder
         disabled={disabled}
       />

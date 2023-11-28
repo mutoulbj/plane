@@ -27,6 +27,11 @@ export interface IUser {
   user_timezone: string;
   username: string;
   theme: IUserTheme;
+  use_case?: string;
+}
+
+export interface IInstanceAdminStatus {
+  is_instance_admin: boolean;
 }
 
 export interface IUserSettings {
@@ -64,7 +69,7 @@ export interface IUserLite {
 }
 
 export interface IUserMemberLite extends IUserLite {
-  email: string;
+  email?: string;
 }
 
 export interface IUserActivity {

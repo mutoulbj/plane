@@ -15,6 +15,7 @@ import { LiteTextEditorWithRef, LiteReadOnlyEditorWithRef } from "@plane/lite-te
 import { timeAgo } from "helpers/date-time.helper";
 // types
 import type { IIssueComment } from "types";
+import useEditorSuggestions from "hooks/use-editor-suggestions";
 
 // services
 const fileService = new FileService();
@@ -38,6 +39,8 @@ export const CommentCard: React.FC<Props> = ({
 
   const editorRef = React.useRef<any>(null);
   const showEditorRef = React.useRef<any>(null);
+
+  const editorSuggestions = useEditorSuggestions();
 
   const [isEditing, setIsEditing] = useState(false);
 
@@ -102,8 +105,10 @@ export const CommentCard: React.FC<Props> = ({
             <div>
               <LiteTextEditorWithRef
                 onEnterKeyPress={handleSubmit(onEnter)}
+                cancelUploadImage={fileService.cancelUpload}
                 uploadFile={fileService.getUploadFileFunction(workspaceSlug as string)}
                 deleteFile={fileService.deleteImage}
+                restoreFile={fileService.restoreImage}
                 ref={editorRef}
                 value={watch("comment_html")}
                 debouncedUpdatesEnabled={false}
@@ -112,11 +117,14 @@ export const CommentCard: React.FC<Props> = ({
                   setValue("comment_json", comment_json);
                   setValue("comment_html", comment_html);
                 }}
+                mentionSuggestions={editorSuggestions.mentionSuggestions}
+                mentionHighlights={editorSuggestions.mentionHighlights}
               />
             </div>
             <div className="flex gap-1 self-end">
               <button
-                type="submit"
+                type="button"
+                onClick={handleSubmit(onEnter)}
                 disabled={isSubmitting}
                 className="group rounded border border-green-500 bg-green-500/20 p-2 shadow-md duration-300 hover:bg-green-500"
               >
@@ -133,7 +141,7 @@ export const CommentCard: React.FC<Props> = ({
           </form>
           <div className={`relative ${isEditing ? "hidden" : ""}`}>
             {showAccessSpecifier && (
-              <div className="absolute top-1 right-1.5 z-[1] text-custom-text-300">
+              <div className="absolute top-2.5 right-2.5 z-[1] text-custom-text-300">
                 {comment.access === "INTERNAL" ? <Lock className="h-3 w-3" /> : <Globe2 className="h-3 w-3" />}
               </div>
             )}
@@ -141,6 +149,7 @@ export const CommentCard: React.FC<Props> = ({
               ref={showEditorRef}
               value={comment.comment_html}
               customClassName="text-xs border border-custom-border-200 bg-custom-background-100"
+              mentionHighlights={editorSuggestions.mentionHighlights}
             />
             <CommentReaction projectId={comment.project} commentId={comment.id} />
           </div>

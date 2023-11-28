@@ -28,7 +28,7 @@ const projectService = new ProjectService();
 export const ProjectDetailsForm: FC<IProjectDetailsForm> = (props) => {
   const { project, workspaceSlug, isAdmin } = props;
   // store
-  const { project: projectStore } = useMobxStore();
+  const { project: projectStore, trackEvent: { postHogEventTracker } } = useMobxStore();
   // toast
   const { setToastAlert } = useToast();
   // form data
@@ -61,18 +61,28 @@ export const ProjectDetailsForm: FC<IProjectDetailsForm> = (props) => {
 
     return projectStore
       .updateProject(workspaceSlug.toString(), project.id, payload)
-      .then(() => {
+      .then((res) => {
+        postHogEventTracker(
+          'PROJECT_UPDATE',
+          {...res, state: "SUCCESS"}
+        );
         setToastAlert({
           type: "success",
           title: "Success!",
           message: "Project updated successfully",
         });
       })
-      .catch(() => {
+      .catch((error) => {
+        postHogEventTracker(
+          'PROJECT_UPDATE',
+          {
+            state: "FAILED"
+          }
+        );
         setToastAlert({
           type: "error",
           title: "Error!",
-          message: "Project could not be updated. Please try again.",
+          message: error?.error ?? "Project could not be updated. Please try again.",
         });
       });
   };
@@ -200,7 +210,7 @@ export const ProjectDetailsForm: FC<IProjectDetailsForm> = (props) => {
                 value={value}
                 placeholder="Enter project description"
                 onChange={onChange}
-                className="min-h-[102px] text-sm"
+                className="min-h-[102px] text-sm font-medium"
                 hasError={Boolean(errors?.description)}
                 disabled={!isAdmin}
               />
@@ -236,7 +246,7 @@ export const ProjectDetailsForm: FC<IProjectDetailsForm> = (props) => {
                   ref={ref}
                   hasError={Boolean(errors.identifier)}
                   placeholder="Enter identifier"
-                  className="w-full"
+                  className="w-full font-medium"
                   disabled={!isAdmin}
                 />
               )}
@@ -253,7 +263,7 @@ export const ProjectDetailsForm: FC<IProjectDetailsForm> = (props) => {
                   value={value}
                   onChange={onChange}
                   label={selectedNetwork?.label ?? "Select network"}
-                  className="!border-custom-border-200 !shadow-none"
+                  buttonClassName="!border-custom-border-200 !shadow-none font-medium rounded-md"
                   input
                   disabled={!isAdmin}
                   optionsClassName="w-full"

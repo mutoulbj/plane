@@ -1,19 +1,13 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { observer } from "mobx-react-lite";
-import { PlusIcon } from "lucide-react";
 // components
-import { SpreadsheetColumnsList, SpreadsheetIssuesColumn, SpreadsheetInlineCreateIssueForm } from "components/issues";
-import { CustomMenu, Spinner } from "@plane/ui";
+import { SpreadsheetColumnsList, SpreadsheetIssuesColumn, SpreadsheetQuickAddIssueForm } from "components/issues";
+import { IssuePeekOverview } from "components/issues/issue-peek-overview";
+import { Spinner } from "@plane/ui";
 // types
-import {
-  IIssue,
-  IIssueDisplayFilterOptions,
-  IIssueDisplayProperties,
-  IIssueLabels,
-  IStateResponse,
-  IUserLite,
-} from "types";
+import { IIssue, IIssueDisplayFilterOptions, IIssueDisplayProperties, IIssueLabel, IState, IUserLite } from "types";
+import { EIssueActions } from "../types";
 
 type Props = {
   displayProperties: IIssueDisplayProperties;
@@ -21,11 +15,18 @@ type Props = {
   handleDisplayFilterUpdate: (data: Partial<IIssueDisplayFilterOptions>) => void;
   issues: IIssue[] | undefined;
   members?: IUserLite[] | undefined;
-  labels?: IIssueLabels[] | undefined;
-  states?: IStateResponse | undefined;
-  handleIssueAction: (issue: IIssue, action: "copy" | "delete" | "edit") => void;
-  handleUpdateIssue: (issue: IIssue, data: Partial<IIssue>) => void;
+  labels?: IIssueLabel[] | undefined;
+  states?: IState[] | undefined;
+  quickActions: (issue: IIssue) => React.ReactNode;
+  handleIssues: (issue: IIssue, action: EIssueActions) => void;
   openIssuesListModal?: (() => void) | null;
+  quickAddCallback?: (
+    workspaceSlug: string,
+    projectId: string,
+    data: IIssue,
+    viewId?: string
+  ) => Promise<IIssue | undefined>;
+  viewId?: string;
   disableUserActions: boolean;
   enableQuickCreateIssue?: boolean;
 };
@@ -39,16 +40,20 @@ export const SpreadsheetView: React.FC<Props> = observer((props) => {
     members,
     labels,
     states,
-    handleIssueAction,
-    handleUpdateIssue,
-    openIssuesListModal,
+    quickActions,
+    handleIssues,
+    quickAddCallback,
+    viewId,
     disableUserActions,
     enableQuickCreateIssue,
   } = props;
 
   const [expandedIssues, setExpandedIssues] = useState<string[]>([]);
-
-  const [isInlineCreateIssueFormOpen, setIsInlineCreateIssueFormOpen] = useState(false);
+  const [issuePeekOverview, setIssuePeekOverView] = useState<{
+    workspaceSlug: string;
+    projectId: string;
+    issueId: string;
+  } | null>(null);
 
   const [isScrolled, setIsScrolled] = useState(false);
 
@@ -76,14 +81,16 @@ export const SpreadsheetView: React.FC<Props> = observer((props) => {
     };
   }, []);
 
+  console.log("spreadsheet issues", issues);
+
   return (
     <div className="relative flex h-full w-full rounded-lg text-custom-text-200 overflow-x-auto whitespace-nowrap bg-custom-background-200">
       <div className="h-full w-full flex flex-col">
         <div
           ref={containerRef}
-          className="flex max-h-full h-full overflow-y-auto divide-x-[0.5px] divide-custom-border-200"
+          className="flex max-h-full h-full overflow-y-auto divide-x-[0.5px] divide-custom-border-200 horizontal-scroll-enable"
         >
-          {issues ? (
+          {issues && issues.length > 0 ? (
             <>
               <div className="sticky left-0 w-[28rem] z-[2]">
                 <div
@@ -96,21 +103,23 @@ export const SpreadsheetView: React.FC<Props> = observer((props) => {
                     {displayProperties.key && (
                       <span className="flex items-center px-4 py-2.5 h-full w-24 flex-shrink-0">ID</span>
                     )}
-                    <span className="flex items-center px-4 py-2.5 h-full w-full flex-grow">Issue</span>
+                    <span className="flex items-center justify-center px-4 py-2.5 h-full w-full flex-grow">Issue</span>
                   </div>
 
-                  {issues.map((issue: IIssue, index) => (
-                    <SpreadsheetIssuesColumn
-                      key={`${issue.id}_${index}`}
-                      issue={issue}
-                      projectId={issue.project_detail.id}
-                      expandedIssues={expandedIssues}
-                      setExpandedIssues={setExpandedIssues}
-                      properties={displayProperties}
-                      handleIssueAction={handleIssueAction}
-                      disableUserActions={disableUserActions}
-                    />
-                  ))}
+                  {issues.map((issue, index) =>
+                    issue ? (
+                      <SpreadsheetIssuesColumn
+                        key={`${issue?.id}_${index}`}
+                        issue={issue}
+                        expandedIssues={expandedIssues}
+                        setExpandedIssues={setExpandedIssues}
+                        properties={displayProperties}
+                        quickActions={quickActions}
+                        disableUserActions={disableUserActions}
+                        setIssuePeekOverView={setIssuePeekOverView}
+                      />
+                    ) : null
+                  )}
                 </div>
               </div>
 
@@ -120,7 +129,7 @@ export const SpreadsheetView: React.FC<Props> = observer((props) => {
                 disableUserActions={disableUserActions}
                 expandedIssues={expandedIssues}
                 handleDisplayFilterUpdate={handleDisplayFilterUpdate}
-                handleUpdateIssue={handleUpdateIssue}
+                handleUpdateIssue={(issue, data) => handleIssues({ ...issue, ...data }, EIssueActions.UPDATE)}
                 issues={issues}
                 members={members}
                 labels={labels}
@@ -136,7 +145,9 @@ export const SpreadsheetView: React.FC<Props> = observer((props) => {
 
         <div className="border-t border-custom-border-100">
           <div className="mb-3 z-50 sticky bottom-0 left-0">
-            {enableQuickCreateIssue && <SpreadsheetInlineCreateIssueForm />}
+            {enableQuickCreateIssue && (
+              <SpreadsheetQuickAddIssueForm formKey="name" quickAddCallback={quickAddCallback} viewId={viewId} />
+            )}
           </div>
 
           {/* {!disableUserActions &&
@@ -174,6 +185,14 @@ export const SpreadsheetView: React.FC<Props> = observer((props) => {
             ))} */}
         </div>
       </div>
+      {issuePeekOverview && (
+        <IssuePeekOverview
+          workspaceSlug={issuePeekOverview?.workspaceSlug}
+          projectId={issuePeekOverview?.projectId}
+          issueId={issuePeekOverview?.issueId}
+          handleIssue={(issueToUpdate: any) => handleIssues(issueToUpdate, EIssueActions.UPDATE)}
+        />
+      )}
     </div>
   );
 });

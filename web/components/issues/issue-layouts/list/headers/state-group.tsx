@@ -4,11 +4,16 @@ import { observer } from "mobx-react-lite";
 import { HeaderGroupByCard } from "./group-by-card";
 // ui
 import { StateGroupIcon } from "@plane/ui";
+// helpers
+import { capitalizeFirstLetter } from "helpers/string.helper";
+import { EProjectStore } from "store/command-palette.store";
 
 export interface IStateGroupHeader {
   column_id: string;
   column_value: any;
   issues_count: number;
+  disableIssueCreation?: boolean;
+  currentStore: EProjectStore;
 }
 
 export const Icon = ({ stateGroup, color }: { stateGroup: any; color?: any }) => (
@@ -18,7 +23,7 @@ export const Icon = ({ stateGroup, color }: { stateGroup: any; color?: any }) =>
 );
 
 export const StateGroupHeader: FC<IStateGroupHeader> = observer((props) => {
-  const { column_id, column_value, issues_count } = props;
+  const { column_value, issues_count, disableIssueCreation, currentStore } = props;
 
   const stateGroup = column_value ?? null;
 
@@ -27,8 +32,11 @@ export const StateGroupHeader: FC<IStateGroupHeader> = observer((props) => {
       {stateGroup && (
         <HeaderGroupByCard
           icon={<Icon stateGroup={stateGroup?.key} />}
-          title={stateGroup?.key || ""}
+          title={capitalizeFirstLetter(stateGroup?.key) || ""}
           count={issues_count}
+          issuePayload={{}}
+          disableIssueCreation={disableIssueCreation}
+          currentStore={currentStore}
         />
       )}
     </>

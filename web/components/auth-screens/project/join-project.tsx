@@ -1,22 +1,23 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/router";
-import { mutate } from "swr";
-// services
-import { ProjectService } from "services/project";
+// mobx store
+import { useMobxStore } from "lib/mobx/store-provider";
+import { RootStore } from "store/root";
 // ui
 import { Button } from "@plane/ui";
 // icons
 import { ClipboardList } from "lucide-react";
 // images
 import JoinProjectImg from "public/auth/project-not-authorized.svg";
-// fetch-keys
-import { USER_PROJECT_VIEW } from "constants/fetch-keys";
-
-const projectService = new ProjectService();
 
 export const JoinProject: React.FC = () => {
   const [isJoiningProject, setIsJoiningProject] = useState(false);
+
+  const {
+    project: projectStore,
+    user: { joinProject },
+  }: RootStore = useMobxStore();
 
   const router = useRouter();
   const { workspaceSlug, projectId } = router.query;
@@ -25,14 +26,12 @@ export const JoinProject: React.FC = () => {
     if (!workspaceSlug || !projectId) return;
 
     setIsJoiningProject(true);
-    projectService
-      .joinProject(workspaceSlug as string, [projectId as string])
-      .then(async () => {
-        await mutate(USER_PROJECT_VIEW(projectId.toString()));
-        setIsJoiningProject(false);
+
+    joinProject(workspaceSlug.toString(), [projectId.toString()])
+      .then(() => {
+        projectStore.fetchProjects(workspaceSlug.toString());
       })
-      .catch((err) => {
-        console.error(err);
+      .finally(() => {
         setIsJoiningProject(false);
       });
   };

@@ -30,6 +30,9 @@ import { Sparkle, X } from "lucide-react";
 import type { IUser, IIssue, ISearchIssueResponse } from "types";
 // components
 import { RichTextEditorWithRef } from "@plane/rich-text-editor";
+import useEditorSuggestions from "hooks/use-editor-suggestions";
+import { observer } from "mobx-react-lite";
+import { useMobxStore } from "lib/mobx/store-provider";
 
 const aiService = new AIService();
 const fileService = new FileService();
@@ -51,9 +54,7 @@ const defaultValues: Partial<IIssue> = {
   parent: null,
   priority: "none",
   assignees: [],
-  assignees_list: [],
   labels: [],
-  labels_list: [],
   start_date: null,
   target_date: null,
 };
@@ -90,7 +91,7 @@ interface IssueFormProps {
   )[];
 }
 
-export const DraftIssueForm: FC<IssueFormProps> = (props) => {
+export const DraftIssueForm: FC<IssueFormProps> = observer((props) => {
   const {
     handleFormSubmit,
     data,
@@ -101,28 +102,30 @@ export const DraftIssueForm: FC<IssueFormProps> = (props) => {
     createMore,
     setCreateMore,
     status,
-    user,
     fieldsToShow,
     handleDiscard,
   } = props;
-
+  // states
   const [stateModal, setStateModal] = useState(false);
   const [labelModal, setLabelModal] = useState(false);
   const [parentIssueListModalOpen, setParentIssueListModalOpen] = useState(false);
   const [selectedParentIssue, setSelectedParentIssue] = useState<ISearchIssueResponse | null>(null);
-
   const [gptAssistantModal, setGptAssistantModal] = useState(false);
   const [iAmFeelingLucky, setIAmFeelingLucky] = useState(false);
-
+  // hooks
   const { setValue: setLocalStorageValue } = useLocalStorage("draftedIssue", {});
-
+  const { setToastAlert } = useToast();
+  const editorSuggestions = useEditorSuggestions();
+  // refs
   const editorRef = useRef<any>(null);
-
+  // router
   const router = useRouter();
   const { workspaceSlug } = router.query;
-
-  const { setToastAlert } = useToast();
-
+  // store
+  const {
+    appConfig: { envConfig },
+  } = useMobxStore();
+  // form info
   const {
     formState: { errors, isSubmitting },
     handleSubmit,
@@ -230,15 +233,10 @@ export const DraftIssueForm: FC<IssueFormProps> = (props) => {
     setIAmFeelingLucky(true);
 
     aiService
-      .createGptTask(
-        workspaceSlug as string,
-        projectId as string,
-        {
-          prompt: issueName,
-          task: "Generate a proper description for this issue.",
-        },
-        user
-      )
+      .createGptTask(workspaceSlug as string, projectId as string, {
+        prompt: issueName,
+        task: "Generate a proper description for this issue.",
+      })
       .then((res) => {
         if (res.response === "")
           setToastAlert({
@@ -299,21 +297,12 @@ export const DraftIssueForm: FC<IssueFormProps> = (props) => {
     <>
       {projectId && (
         <>
-          <CreateStateModal
-            isOpen={stateModal}
-            handleClose={() => setStateModal(false)}
-            projectId={projectId}
-            user={user}
-          />
+          <CreateStateModal isOpen={stateModal} handleClose={() => setStateModal(false)} projectId={projectId} />
           <CreateLabelModal
             isOpen={labelModal}
             handleClose={() => setLabelModal(false)}
             projectId={projectId}
-            user={user}
-            onSuccess={(response) => {
-              setValue("labels", [...watch("labels"), response.id]);
-              setValue("labels_list", [...watch("labels_list"), response.id]);
-            }}
+            onSuccess={(response) => setValue("labels", [...watch("labels"), response.id])}
           />
         </>
       )}
@@ -433,8 +422,10 @@ export const DraftIssueForm: FC<IssueFormProps> = (props) => {
                     control={control}
                     render={({ field: { value, onChange } }) => (
                       <RichTextEditorWithRef
+                        cancelUploadImage={fileService.cancelUpload}
                         uploadFile={fileService.getUploadFileFunction(workspaceSlug as string)}
                         deleteFile={fileService.deleteImage}
+                        restoreFile={fileService.restoreImage}
                         ref={editorRef}
                         debouncedUpdatesEnabled={false}
                         value={
@@ -447,24 +438,28 @@ export const DraftIssueForm: FC<IssueFormProps> = (props) => {
                           onChange(description_html);
                           setValue("description", description);
                         }}
+                        mentionHighlights={editorSuggestions.mentionHighlights}
+                        mentionSuggestions={editorSuggestions.mentionSuggestions}
                       />
                     )}
                   />
-                  <GptAssistantModal
-                    isOpen={gptAssistantModal}
-                    handleClose={() => {
-                      setGptAssistantModal(false);
-                      // this is done so that the title do not reset after gpt popover closed
-                      reset(getValues());
-                    }}
-                    inset="top-2 left-0"
-                    content=""
-                    htmlContent={watch("description_html")}
-                    onResponse={(response) => {
-                      handleAiAssistance(response);
-                    }}
-                    projectId={projectId}
-                  />
+                  {envConfig?.has_openai_configured && (
+                    <GptAssistantModal
+                      isOpen={gptAssistantModal}
+                      handleClose={() => {
+                        setGptAssistantModal(false);
+                        // this is done so that the title do not reset after gpt popover closed
+                        reset(getValues());
+                      }}
+                      inset="top-2 left-0"
+                      content=""
+                      htmlContent={watch("description_html")}
+                      onResponse={(response) => {
+                        handleAiAssistance(response);
+                      }}
+                      projectId={projectId}
+                    />
+                  )}
                 </div>
               )}
               <div className="flex flex-wrap items-center gap-2">
@@ -605,11 +600,12 @@ export const DraftIssueForm: FC<IssueFormProps> = (props) => {
             <ToggleSwitch value={createMore} onChange={() => {}} size="md" />
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="neutral-primary" onClick={handleDiscard}>
+            <Button variant="neutral-primary" size="sm" onClick={handleDiscard}>
               Discard
             </Button>
             <Button
               variant="neutral-primary"
+              size="sm"
               loading={isSubmitting}
               onClick={handleSubmit((formData) =>
                 handleCreateUpdateIssue(formData, data?.id ? "updateDraft" : "createDraft")
@@ -620,6 +616,7 @@ export const DraftIssueForm: FC<IssueFormProps> = (props) => {
             <Button
               loading={isSubmitting}
               variant="primary"
+              size="sm"
               onClick={handleSubmit((formData) =>
                 handleCreateUpdateIssue(formData, data ? "convertToNewIssue" : "createNewIssue")
               )}
@@ -631,4 +628,4 @@ export const DraftIssueForm: FC<IssueFormProps> = (props) => {
       </form>
     </>
   );
-};
+});

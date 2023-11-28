@@ -1,16 +1,16 @@
 import React from "react";
 
 // components
-import { LabelSelect } from "components/project";
+import { IssuePropertyLabels } from "../../properties";
 // hooks
 import useSubIssue from "hooks/use-sub-issue";
 // types
-import { IIssue, IIssueLabels } from "types";
+import { IIssue, IIssueLabel } from "types";
 
 type Props = {
   issue: IIssue;
   onChange: (formData: Partial<IIssue>) => void;
-  labels: IIssueLabels[] | undefined;
+  labels: IIssueLabel[] | undefined;
   expandedIssues: string[];
   disabled: boolean;
 };
@@ -20,14 +20,17 @@ export const SpreadsheetLabelColumn: React.FC<Props> = (props) => {
 
   const isExpanded = expandedIssues.indexOf(issue.id) > -1;
 
-  const { subIssues, isLoading } = useSubIssue(issue.project_detail.id, issue.id, isExpanded);
+  const { subIssues, isLoading } = useSubIssue(issue.project_detail?.id, issue.id, isExpanded);
 
   return (
     <>
-      <LabelSelect
+      <IssuePropertyLabels
+        projectId={issue.project_detail?.id ?? null}
         value={issue.labels}
-        onChange={(data) => onChange({ labels_list: data })}
-        labels={labels ?? []}
+        onChange={(data) => onChange({ labels: data })}
+        className="h-full w-full"
+        buttonClassName="px-2.5 h-full"
+        noLabelBorder
         hideDropdownArrow
         maxRender={1}
         disabled={disabled}

@@ -5,17 +5,14 @@ import { mutate } from "swr";
 import { useMobxStore } from "lib/mobx/store-provider";
 // services
 import { IssueService } from "services/issue";
-import { TrackEventService } from "services/track_event.service";
 // components
 import { ViewDueDateSelect, ViewStartDateSelect } from "components/issues";
-import { MembersSelect, PrioritySelect } from "components/project";
-import { StateSelect } from "components/states";
-// helpers
-import { getStatesList } from "helpers/state.helper";
+import { PrioritySelect } from "components/project";
 // types
 import { IUser, IIssue, IState } from "types";
 // fetch-keys
 import { SUB_ISSUES } from "constants/fetch-keys";
+import { IssuePropertyAssignee, IssuePropertyState } from "../issue-layouts/properties";
 
 export interface IIssueProperty {
   workspaceSlug: string;
@@ -27,29 +24,16 @@ export interface IIssueProperty {
 
 // services
 const issueService = new IssueService();
-const trackEventService = new TrackEventService();
 
 export const IssueProperty: React.FC<IIssueProperty> = observer((props) => {
   const { workspaceSlug, parentIssue, issue, user, editable } = props;
 
-  const { project: projectStore, issueFilter: issueFilterStore } = useMobxStore();
+  const { issueFilter: issueFilterStore } = useMobxStore();
 
   const displayProperties = issueFilterStore.userDisplayProperties ?? {};
 
   const handlePriorityChange = (data: any) => {
     partialUpdateIssue({ priority: data });
-    trackEventService.trackIssuePartialPropertyUpdateEvent(
-      {
-        workspaceSlug,
-        workspaceId: issue.workspace,
-        projectId: issue.project_detail.id,
-        projectIdentifier: issue.project_detail.identifier,
-        projectName: issue.project_detail.name,
-        issueId: issue.id,
-      },
-      "ISSUE_PROPERTY_UPDATE_PRIORITY",
-      user as IUser
-    );
   };
 
   const handleStateChange = (data: IState) => {
@@ -57,35 +41,10 @@ export const IssueProperty: React.FC<IIssueProperty> = observer((props) => {
       state: data.id,
       state_detail: data,
     });
-    trackEventService.trackIssuePartialPropertyUpdateEvent(
-      {
-        workspaceSlug,
-        workspaceId: issue.workspace,
-        projectId: issue.project_detail.id,
-        projectIdentifier: issue.project_detail.identifier,
-        projectName: issue.project_detail.name,
-        issueId: issue.id,
-      },
-      "ISSUE_PROPERTY_UPDATE_STATE",
-      user as IUser
-    );
   };
 
   const handleAssigneeChange = (data: string[]) => {
-    partialUpdateIssue({ assignees_list: data, assignees: data });
-
-    trackEventService.trackIssuePartialPropertyUpdateEvent(
-      {
-        workspaceSlug,
-        workspaceId: issue.workspace,
-        projectId: issue.project_detail.id,
-        projectIdentifier: issue.project_detail.identifier,
-        projectName: issue.project_detail.name,
-        issueId: issue.id,
-      },
-      "ISSUE_PROPERTY_UPDATE_ASSIGNEE",
-      user as IUser
-    );
+    partialUpdateIssue({ assignees: data });
   };
 
   const partialUpdateIssue = async (data: Partial<IIssue>) => {
@@ -102,7 +61,7 @@ export const IssueProperty: React.FC<IIssueProperty> = observer((props) => {
       false
     );
 
-    const issueResponse = await issueService.patchIssue(workspaceSlug as string, issue.project, issue.id, data, user);
+    const issueResponse = await issueService.patchIssue(workspaceSlug as string, issue.project, issue.id, data);
 
     mutate(
       SUB_ISSUES(parentIssue.id),
@@ -116,8 +75,6 @@ export const IssueProperty: React.FC<IIssueProperty> = observer((props) => {
       true
     );
   };
-
-  const statesList = getStatesList(projectStore.states?.[issue.project]);
 
   return (
     <div className="relative flex items-center gap-1">
@@ -134,12 +91,12 @@ export const IssueProperty: React.FC<IIssueProperty> = observer((props) => {
 
       {displayProperties.state && (
         <div className="flex-shrink-0">
-          <StateSelect
-            value={issue.state_detail}
-            states={statesList}
+          <IssuePropertyState
+            projectId={issue?.project_detail?.id || null}
+            value={issue?.state_detail || null}
             onChange={(data) => handleStateChange(data)}
+            disabled={false}
             hideDropdownArrow
-            disabled={!editable}
           />
         </div>
       )}
@@ -168,13 +125,12 @@ export const IssueProperty: React.FC<IIssueProperty> = observer((props) => {
 
       {displayProperties.assignee && (
         <div className="flex-shrink-0">
-          <MembersSelect
-            value={issue.assignees}
-            onChange={(val) => handleAssigneeChange(val)}
-            members={projectStore.members ? (projectStore.members[issue.project] ?? []).map((m) => m.member) : []}
+          <IssuePropertyAssignee
+            projectId={issue?.project_detail?.id || null}
+            value={issue?.assignees || null}
             hideDropdownArrow
-            disabled={!editable}
-            multiple
+            onChange={(val) => handleAssigneeChange(val)}
+            disabled={false}
           />
         </div>
       )}

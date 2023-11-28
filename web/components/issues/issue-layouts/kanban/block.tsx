@@ -1,8 +1,11 @@
 import { Draggable } from "@hello-pangea/dnd";
 // components
 import { KanBanProperties } from "./properties";
+import { Tooltip } from "@plane/ui";
+import { IssuePeekOverview } from "components/issues/issue-peek-overview";
 // types
-import { IEstimatePoint, IIssue, IIssueLabels, IState, IUserLite } from "types";
+import { IIssueDisplayProperties, IIssue } from "types";
+import { EIssueActions } from "../types";
 
 interface IssueBlockProps {
   sub_group_id: string;
@@ -10,18 +13,11 @@ interface IssueBlockProps {
   index: number;
   issue: IIssue;
   isDragDisabled: boolean;
-  handleIssues: (
-    sub_group_by: string | null,
-    group_by: string | null,
-    issue: IIssue,
-    action: "update" | "delete"
-  ) => void;
+  showEmptyGroup: boolean;
+  handleIssues: (sub_group_by: string | null, group_by: string | null, issue: IIssue, action: EIssueActions) => void;
   quickActions: (sub_group_by: string | null, group_by: string | null, issue: IIssue) => React.ReactNode;
-  displayProperties: any;
-  states: IState[] | null;
-  labels: IIssueLabels[] | null;
-  members: IUserLite[] | null;
-  estimates: IEstimatePoint[] | null;
+  displayProperties: IIssueDisplayProperties | null;
+  isReadOnly: boolean;
 }
 
 export const KanbanIssueBlock: React.FC<IssueBlockProps> = (props) => {
@@ -31,22 +27,20 @@ export const KanbanIssueBlock: React.FC<IssueBlockProps> = (props) => {
     index,
     issue,
     isDragDisabled,
+    showEmptyGroup,
     handleIssues,
     quickActions,
     displayProperties,
-    states,
-    labels,
-    members,
-    estimates,
+    isReadOnly,
   } = props;
 
   const updateIssue = (sub_group_by: string | null, group_by: string | null, issueToUpdate: IIssue) => {
-    if (issueToUpdate) handleIssues(sub_group_by, group_by, issueToUpdate, "update");
+    if (issueToUpdate) handleIssues(sub_group_by, group_by, issueToUpdate, EIssueActions.UPDATE);
   };
 
   return (
     <>
-      <Draggable draggableId={issue.id} index={index} isDragDisabled={isDragDisabled}>
+      <Draggable draggableId={issue.id} index={index}>
         {(provided, snapshot) => (
           <div
             className="group/kanban-block relative p-1.5 hover:cursor-default"
@@ -65,27 +59,41 @@ export const KanbanIssueBlock: React.FC<IssueBlockProps> = (props) => {
               )}
             </div>
             <div
-              className={`text-sm rounded p-2 px-3 shadow-custom-shadow-2xs space-y-[8px] border transition-all bg-custom-background-100 hover:cursor-grab ${
-                snapshot.isDragging ? `border-custom-primary-100` : `border-transparent`
-              }`}
+              className={`text-sm rounded py-2 px-3 shadow-custom-shadow-2xs space-y-2 border-[0.5px] border-custom-border-200 transition-all bg-custom-background-100 ${
+                isDragDisabled ? "" : "hover:cursor-grab"
+              } ${snapshot.isDragging ? `border-custom-primary-100` : `border-transparent`}`}
             >
               {displayProperties && displayProperties?.key && (
                 <div className="text-xs line-clamp-1 text-custom-text-300">
                   {issue.project_detail.identifier}-{issue.sequence_id}
                 </div>
               )}
-              <div className="line-clamp-2 text-sm font-medium text-custom-text-100">{issue.name}</div>
+              <IssuePeekOverview
+                workspaceSlug={issue?.workspace_detail?.slug}
+                projectId={issue?.project_detail?.id}
+                issueId={issue?.id}
+                handleIssue={(issueToUpdate) => {
+                  handleIssues(
+                    !sub_group_id && sub_group_id === "null" ? null : sub_group_id,
+                    !columnId && columnId === "null" ? null : columnId,
+                    { ...issue, ...issueToUpdate },
+                    EIssueActions.UPDATE
+                  );
+                }}
+              >
+                <Tooltip tooltipHeading="Title" tooltipContent={issue.name}>
+                  <div className="line-clamp-2 text-sm font-medium text-custom-text-100">{issue.name}</div>
+                </Tooltip>
+              </IssuePeekOverview>
               <div>
                 <KanBanProperties
                   sub_group_id={sub_group_id}
                   columnId={columnId}
                   issue={issue}
                   handleIssues={updateIssue}
-                  display_properties={displayProperties}
-                  states={states}
-                  labels={labels}
-                  members={members}
-                  estimates={estimates}
+                  displayProperties={displayProperties}
+                  showEmptyGroup={showEmptyGroup}
+                  isReadOnly={isReadOnly}
                 />
               </div>
             </div>

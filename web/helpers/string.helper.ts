@@ -5,7 +5,13 @@ import {
   VIEW_ISSUES,
 } from "constants/fetch-keys";
 
-export const addSpaceIfCamelCase = (str: string) => str.replace(/([a-z])([A-Z])/g, "$1 $2");
+export const addSpaceIfCamelCase = (str: string) => {
+  if (str === undefined || str === null) return "";
+
+  if (typeof str !== "string") str = `${str}`;
+
+  return str.replace(/([a-z])([A-Z])/g, "$1 $2");
+};
 
 export const replaceUnderscoreIfSnakeCase = (str: string) => str.replace(/_/g, " ");
 
@@ -173,4 +179,30 @@ export const getFetchKeysForIssueMutation = (options: {
   return {
     ...ganttFetchKey,
   };
+};
+
+/**
+ * @returns {boolean} true if searchQuery is substring of text in the same order, false otherwise
+ * @description Returns true if searchQuery is substring of text in the same order, false otherwise
+ * @param {string} text string to compare from
+ * @param {string} searchQuery
+ * @example substringMatch("hello world", "hlo") => true
+ * @example substringMatch("hello world", "hoe") => false
+ */
+export const substringMatch = (text: string, searchQuery: string): boolean => {
+  try {
+    let searchIndex = 0;
+
+    for (let i = 0; i < text.length; i++) {
+      if (text[i].toLowerCase() === searchQuery[searchIndex]?.toLowerCase()) searchIndex++;
+
+      // All characters of searchQuery found in order
+      if (searchIndex === searchQuery.length) return true;
+    }
+
+    // Not all characters of searchQuery found in order
+    return false;
+  } catch (error) {
+    return false;
+  }
 };

@@ -1,4 +1,3 @@
-"use client";
 import * as React from "react";
 import {
   EditorContainer,
@@ -8,21 +7,26 @@ import {
 } from "@plane/editor-core";
 import { FixedMenu } from "./menus/fixed-menu";
 import { LiteTextEditorExtensions } from "./extensions";
-
-export type UploadImage = (file: File) => Promise<string>;
-export type DeleteImage = (assetUrlWithWorkspaceId: string) => Promise<any>;
+import {
+  UploadImage,
+  DeleteImage,
+  IMentionSuggestion,
+  RestoreImage,
+} from "@plane/editor-types";
 
 interface ILiteTextEditor {
   value: string;
   uploadFile: UploadImage;
   deleteFile: DeleteImage;
+  restoreFile: RestoreImage;
+
   noBorder?: boolean;
   borderOnFocus?: boolean;
   customClassName?: string;
   editorContentCustomClassNames?: string;
   onChange?: (json: any, html: string) => void;
   setIsSubmitting?: (
-    isSubmitting: "submitting" | "submitted" | "saved"
+    isSubmitting: "submitting" | "submitted" | "saved",
   ) => void;
   setShouldShowAlert?: (showAlert: boolean) => void;
   forwardedRef?: any;
@@ -38,6 +42,10 @@ interface ILiteTextEditor {
     }[];
   };
   onEnterKeyPress?: (e?: any) => void;
+  cancelUploadImage?: () => any;
+  mentionHighlights?: string[];
+  mentionSuggestions?: IMentionSuggestion[];
+  submitButton?: React.ReactNode;
 }
 
 interface LiteTextEditorProps extends ILiteTextEditor {
@@ -49,32 +57,43 @@ interface EditorHandle {
   setEditorValue: (content: string) => void;
 }
 
-const LiteTextEditor = ({
-  onChange,
-  debouncedUpdatesEnabled,
-  setIsSubmitting,
-  setShouldShowAlert,
-  editorContentCustomClassNames,
-  value,
-  uploadFile,
-  deleteFile,
-  noBorder,
-  borderOnFocus,
-  customClassName,
-  forwardedRef,
-  commentAccessSpecifier,
-  onEnterKeyPress,
-}: LiteTextEditorProps) => {
+const LiteTextEditor = (props: LiteTextEditorProps) => {
+  const {
+    onChange,
+    cancelUploadImage,
+    debouncedUpdatesEnabled,
+    setIsSubmitting,
+    setShouldShowAlert,
+    editorContentCustomClassNames,
+    value,
+    uploadFile,
+    deleteFile,
+    restoreFile,
+    noBorder,
+    borderOnFocus,
+    customClassName,
+    forwardedRef,
+    commentAccessSpecifier,
+    onEnterKeyPress,
+    mentionHighlights,
+    mentionSuggestions,
+    submitButton,
+  } = props;
+
   const editor = useEditor({
     onChange,
+    cancelUploadImage,
     debouncedUpdatesEnabled,
     setIsSubmitting,
     setShouldShowAlert,
     value,
     uploadFile,
     deleteFile,
+    restoreFile,
     forwardedRef,
     extensions: LiteTextEditorExtensions(onEnterKeyPress),
+    mentionHighlights,
+    mentionSuggestions,
   });
 
   const editorClassNames = getEditorClassNames({
@@ -98,6 +117,7 @@ const LiteTextEditor = ({
             uploadFile={uploadFile}
             setIsSubmitting={setIsSubmitting}
             commentAccessSpecifier={commentAccessSpecifier}
+            submitButton={submitButton}
           />
         </div>
       </div>
@@ -106,7 +126,7 @@ const LiteTextEditor = ({
 };
 
 const LiteTextEditorWithRef = React.forwardRef<EditorHandle, ILiteTextEditor>(
-  (props, ref) => <LiteTextEditor {...props} forwardedRef={ref} />
+  (props, ref) => <LiteTextEditor {...props} forwardedRef={ref} />,
 );
 
 LiteTextEditorWithRef.displayName = "LiteTextEditorWithRef";

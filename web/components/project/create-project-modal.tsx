@@ -53,7 +53,7 @@ export interface ICreateProjectForm {
   description: string;
   emoji_and_icon: string;
   network: number;
-  project_lead_member: IWorkspaceMember;
+  project_lead_member: string;
   project_lead: string;
   cover_image: string;
   icon_prop: any;
@@ -63,8 +63,11 @@ export interface ICreateProjectForm {
 export const CreateProjectModal: FC<Props> = observer((props) => {
   const { isOpen, onClose, setToFavorite = false, workspaceSlug } = props;
   // store
-  const { project: projectStore, workspace: workspaceStore } = useMobxStore();
-  const workspaceMembers = workspaceStore.members[workspaceSlug] || [];
+  const {
+    project: projectStore,
+    workspaceMember: { workspaceMembers },
+    trackEvent: { postHogEventTracker }
+  } = useMobxStore();
   // states
   const [isChangeInIdentifierRequired, setIsChangeInIdentifierRequired] = useState(true);
   // toast
@@ -122,11 +125,19 @@ export const CreateProjectModal: FC<Props> = observer((props) => {
     if (typeof formData.emoji_and_icon === "object") payload.icon_prop = formData.emoji_and_icon;
     else payload.emoji = formData.emoji_and_icon;
 
-    payload.project_lead = formData.project_lead_member?.member.id;
+    payload.project_lead = formData.project_lead_member;
 
     return projectStore
       .createProject(workspaceSlug.toString(), payload)
       .then((res) => {
+        const newPayload = {
+          ...res,
+          state: "SUCCESS"
+        }
+        postHogEventTracker(
+          "PROJECT_CREATE",
+          newPayload,
+        )
         setToastAlert({
           type: "success",
           title: "Success!",
@@ -138,12 +149,19 @@ export const CreateProjectModal: FC<Props> = observer((props) => {
         handleClose();
       })
       .catch((err) => {
-        Object.keys(err.data).map((key) =>
+        Object.keys(err.data).map((key) => {
           setToastAlert({
             type: "error",
             title: "Error!",
             message: err.data[key],
-          })
+          });
+          postHogEventTracker(
+            "PROJECT_CREATE",
+            {
+              state: "FAILED"
+            },
+          )
+        }
         );
       });
   };
@@ -184,7 +202,7 @@ export const CreateProjectModal: FC<Props> = observer((props) => {
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 bg-custom-backdrop bg-opacity-50 transition-opacity" />
+          <div className="fixed inset-0 bg-custom-backdrop transition-opacity" />
         </Transition.Child>
 
         <div className="fixed inset-0 z-20 overflow-y-auto">
@@ -198,7 +216,7 @@ export const CreateProjectModal: FC<Props> = observer((props) => {
               leaveFrom="opacity-100 translate-y-0 sm:scale-100"
               leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
             >
-              <Dialog.Panel className="transform rounded-lg bg-custom-background-100 text-left shadow-xl transition-all p-3 w-full sm:w-3/5 lg:w-1/2 xl:w-2/5">
+              <Dialog.Panel className="transform rounded-lg bg-custom-background-100 text-left shadow-custom-shadow-md transition-all p-3 w-full sm:w-3/5 lg:w-1/2 xl:w-2/5">
                 <div className="group relative h-44 w-full rounded-lg bg-custom-background-80">
                   {watch("cover_image") !== null && (
                     <img
@@ -209,7 +227,7 @@ export const CreateProjectModal: FC<Props> = observer((props) => {
                   )}
 
                   <div className="absolute right-2 top-2 p-2">
-                    <button type="button" onClick={handleClose}>
+                    <button data-posthog="PROJECT_MODAL_CLOSE" type="button" onClick={handleClose}>
                       <X className="h-5 w-5 text-white" />
                     </button>
                   </div>
@@ -261,10 +279,11 @@ export const CreateProjectModal: FC<Props> = observer((props) => {
                               name="name"
                               type="text"
                               value={value}
+                              tabIndex={1}
                               onChange={handleNameChange(onChange)}
                               hasError={Boolean(errors.name)}
                               placeholder="Project Title"
-                              className="w-full"
+                              className="w-full focus:border-blue-400"
                             />
                           )}
                         />
@@ -293,10 +312,11 @@ export const CreateProjectModal: FC<Props> = observer((props) => {
                               name="identifier"
                               type="text"
                               value={value}
+                              tabIndex={2}
                               onChange={handleIdentifierChange(onChange)}
                               hasError={Boolean(errors.identifier)}
                               placeholder="Identifier"
-                              className="text-xs w-full"
+                              className="text-xs w-full focus:border-blue-400"
                             />
                           )}
                         />
@@ -311,9 +331,10 @@ export const CreateProjectModal: FC<Props> = observer((props) => {
                               id="description"
                               name="description"
                               value={value}
+                              tabIndex={3}
                               placeholder="Description..."
                               onChange={onChange}
-                              className="text-sm !h-24"
+                              className="text-sm !h-24 focus:border-blue-400"
                               hasError={Boolean(errors?.description)}
                             />
                           )}
@@ -322,7 +343,7 @@ export const CreateProjectModal: FC<Props> = observer((props) => {
                     </div>
 
                     <div className="flex items-center gap-2 flex-wrap">
-                      <div className="flex-shrink-0">
+                      <div className="flex-shrink-0" tabIndex={4}>
                         <Controller
                           name="network"
                           control={control}
@@ -330,9 +351,9 @@ export const CreateProjectModal: FC<Props> = observer((props) => {
                             <CustomSelect
                               value={value}
                               onChange={onChange}
-                              buttonClassName="border-[0.5px] shadow-md !py-1.5"
+                              buttonClassName="border-[0.5px] shadow-md !py-1.5 shadow-none"
                               label={
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 text-custom-text-300">
                                   {currentNetwork ? (
                                     <>
                                       <currentNetwork.icon className="h-[18px] w-[18px]" />
@@ -359,15 +380,15 @@ export const CreateProjectModal: FC<Props> = observer((props) => {
                           )}
                         />
                       </div>
-                      <div className="flex-shrink-0">
+                      <div className="flex-shrink-0" tabIndex={5}>
                         <Controller
                           name="project_lead_member"
                           control={control}
                           render={({ field: { value, onChange } }) => (
                             <WorkspaceMemberSelect
-                              value={value}
+                              value={workspaceMembers?.filter((member: IWorkspaceMember) => member.member.id === value)[0]}
                               onChange={onChange}
-                              options={workspaceMembers}
+                              options={workspaceMembers || []}
                               placeholder="Select Lead"
                             />
                           )}
@@ -377,10 +398,10 @@ export const CreateProjectModal: FC<Props> = observer((props) => {
                   </div>
 
                   <div className="flex justify-end gap-2 pt-5">
-                    <Button variant="neutral-primary" onClick={handleClose}>
+                    <Button variant="neutral-primary" size="sm" onClick={handleClose} tabIndex={6}>
                       Cancel
                     </Button>
-                    <Button variant="primary" type="submit" size="sm" loading={isSubmitting}>
+                    <Button variant="primary" type="submit" size="sm" loading={isSubmitting} tabIndex={7}>
                       {isSubmitting ? "Creating..." : "Create Project"}
                     </Button>
                   </div>

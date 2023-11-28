@@ -1,11 +1,10 @@
+import { FC } from "react";
 import { useRouter } from "next/router";
 import { observer } from "mobx-react-lite";
 import { ContrastIcon, FileText, Inbox, Layers } from "lucide-react";
 import { DiceIcon, ToggleSwitch } from "@plane/ui";
 // mobx store
 import { useMobxStore } from "lib/mobx/store-provider";
-// services
-import { MiscellaneousEventType, TrackEventService } from "services/track_event.service";
 // hooks
 import useToast from "hooks/use-toast";
 // types
@@ -18,7 +17,6 @@ const PROJECT_FEATURES_LIST = [
     title: "Cycles",
     description: "Cycles are enabled for all the projects in this workspace. Access them from the sidebar.",
     icon: <ContrastIcon className="h-4 w-4 text-purple-500 flex-shrink-0 rotate-180" />,
-
     property: "cycle_view",
   },
   {
@@ -47,58 +45,39 @@ const PROJECT_FEATURES_LIST = [
   },
 ];
 
-const getEventType = (feature: string, toggle: boolean): MiscellaneousEventType => {
-  switch (feature) {
-    case "Cycles":
-      return toggle ? "TOGGLE_CYCLE_ON" : "TOGGLE_CYCLE_OFF";
-    case "Modules":
-      return toggle ? "TOGGLE_MODULE_ON" : "TOGGLE_MODULE_OFF";
-    case "Views":
-      return toggle ? "TOGGLE_VIEW_ON" : "TOGGLE_VIEW_OFF";
-    case "Pages":
-      return toggle ? "TOGGLE_PAGES_ON" : "TOGGLE_PAGES_OFF";
-    case "Inbox":
-      return toggle ? "TOGGLE_INBOX_ON" : "TOGGLE_INBOX_OFF";
-    default:
-      throw new Error("Invalid feature");
-  }
-};
-
-// services
-const trackEventService = new TrackEventService();
-
-export const ProjectFeaturesList: React.FC<Props> = observer((props) => {
-  const {} = props;
-
+export const ProjectFeaturesList: FC<Props> = observer(() => {
+  // router
   const router = useRouter();
   const { workspaceSlug, projectId } = router.query;
-
-  const { project: projectStore, user: userStore } = useMobxStore();
-
-  const projectDetails = projectId ? projectStore.project_details[projectId.toString()] : undefined;
-  const user = userStore.currentUser ?? undefined;
-  const isAdmin = userStore.projectMemberInfo?.role === 20;
-
+  // store
+  const {
+    workspace: { currentWorkspace },
+    project: { currentProjectDetails, updateProject },
+    user: { currentUser, currentProjectRole },
+    trackEvent: { setTrackElement, postHogEventTracker },
+  } = useMobxStore();
+  const isAdmin = currentProjectRole === 20;
+  // hooks
   const { setToastAlert } = useToast();
 
   const handleSubmit = async (formData: Partial<IProject>) => {
-    if (!workspaceSlug || !projectId || !projectDetails) return;
-
+    if (!workspaceSlug || !projectId || !currentProjectDetails) return;
     setToastAlert({
       type: "success",
       title: "Success!",
       message: "Project feature updated successfully.",
     });
-
-    projectStore.updateProject(workspaceSlug.toString(), projectId.toString(), formData);
+    updateProject(workspaceSlug.toString(), projectId.toString(), formData);
   };
+
+  if (!currentUser) return <></>;
 
   return (
     <div>
       {PROJECT_FEATURES_LIST.map((feature) => (
         <div
           key={feature.property}
-          className="flex items-center justify-between gap-x-8 gap-y-2 border-b border-custom-border-200 bg-custom-background-100 p-4"
+          className="flex items-center justify-between gap-x-8 gap-y-2 border-b border-custom-border-100 bg-custom-background-100 p-4"
         >
           <div className="flex items-start gap-3">
             <div className="flex items-center justify-center p-3 rounded bg-custom-background-90">{feature.icon}</div>
@@ -108,21 +87,20 @@ export const ProjectFeaturesList: React.FC<Props> = observer((props) => {
             </div>
           </div>
           <ToggleSwitch
-            value={projectDetails?.[feature.property as keyof IProject]}
+            value={currentProjectDetails?.[feature.property as keyof IProject]}
             onChange={() => {
-              trackEventService.trackMiscellaneousEvent(
-                {
-                  workspaceId: (projectDetails?.workspace as any)?.id,
-                  workspaceSlug,
-                  projectId,
-                  projectIdentifier: projectDetails?.identifier,
-                  projectName: projectDetails?.name,
-                },
-                getEventType(feature.title, !projectDetails?.[feature.property as keyof IProject]),
-                user
-              );
+              console.log(currentProjectDetails?.[feature.property as keyof IProject]);
+              setTrackElement("PROJECT_SETTINGS_FEATURES_PAGE");
+              postHogEventTracker(`TOGGLE_${feature.title.toUpperCase()}`, {
+                workspace_id: currentWorkspace?.id,
+                workspace_slug: currentWorkspace?.slug,
+                project_id: currentProjectDetails?.id,
+                project_name: currentProjectDetails?.name,
+                project_identifier: currentProjectDetails?.identifier,
+                enabled: !currentProjectDetails?.[feature.property as keyof IProject]
+              });
               handleSubmit({
-                [feature.property]: !projectDetails?.[feature.property as keyof IProject],
+                [feature.property]: !currentProjectDetails?.[feature.property as keyof IProject],
               });
             }}
             disabled={!isAdmin}

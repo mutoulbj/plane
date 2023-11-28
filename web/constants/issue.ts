@@ -1,6 +1,5 @@
-import { v4 as uuidv4 } from "uuid";
 // icons
-import { Calendar, GanttChart, Kanban, List, Sheet } from "lucide-react";
+import { Calendar, GanttChartSquare, Kanban, List, Sheet } from "lucide-react";
 // types
 import {
   IIssueDisplayProperties,
@@ -12,9 +11,6 @@ import {
   TIssuePriorities,
   TIssueTypeFilters,
   TStateGroups,
-  IIssue,
-  IProject,
-  IWorkspace,
 } from "types";
 
 export const ISSUE_PRIORITIES: {
@@ -129,10 +125,11 @@ export const ISSUE_LAYOUTS: {
   { key: "kanban", title: "Kanban Layout", icon: Kanban },
   { key: "calendar", title: "Calendar Layout", icon: Calendar },
   { key: "spreadsheet", title: "Spreadsheet Layout", icon: Sheet },
-  { key: "gantt_chart", title: "Gantt Chart Layout", icon: GanttChart },
+  { key: "gantt_chart", title: "Gantt Chart Layout", icon: GanttChartSquare },
 ];
 
 export const ISSUE_LIST_FILTERS = [
+  { key: "mentions", title: "Mentions" },
   { key: "priority", title: "Priority" },
   { key: "state", title: "State" },
   { key: "assignees", title: "Assignees" },
@@ -242,7 +239,7 @@ export const ISSUE_DISPLAY_FILTERS_BY_LAYOUT: {
       filters: ["priority", "state_group", "labels", "start_date", "target_date"],
       display_properties: true,
       display_filters: {
-        group_by: ["state_detail.group", "priority", "project", "labels", null],
+        group_by: ["state_detail.group", "priority", "project", "labels"],
         order_by: ["sort_order", "-created_at", "-updated_at", "start_date", "priority"],
         type: [null, "active", "backlog"],
       },
@@ -254,23 +251,10 @@ export const ISSUE_DISPLAY_FILTERS_BY_LAYOUT: {
   },
   archived_issues: {
     list: {
-      filters: ["priority", "state_group", "labels", "start_date", "target_date"],
+      filters: ["priority", "state", "assignees", "created_by", "labels", "start_date", "target_date"],
       display_properties: true,
       display_filters: {
-        group_by: ["state_detail.group", "priority", "project", "labels", null],
-        order_by: ["sort_order", "-created_at", "-updated_at", "start_date", "priority"],
-        type: [null, "active", "backlog"],
-      },
-      extra_options: {
-        access: true,
-        values: ["show_empty_groups"],
-      },
-    },
-    kanban: {
-      filters: ["priority", "state_group", "labels", "start_date", "target_date"],
-      display_properties: true,
-      display_filters: {
-        group_by: ["state_detail.group", "priority", "project", "labels", null],
+        group_by: ["state", "state_detail.group", "priority", "labels", "assignees", "created_by", null],
         order_by: ["sort_order", "-created_at", "-updated_at", "start_date", "priority"],
         type: [null, "active", "backlog"],
       },
@@ -298,7 +282,7 @@ export const ISSUE_DISPLAY_FILTERS_BY_LAYOUT: {
       filters: ["priority", "state_group", "labels", "start_date", "target_date"],
       display_properties: true,
       display_filters: {
-        group_by: ["state_detail.group", "priority", "project", "labels", null],
+        group_by: ["state_detail.group", "priority", "project", "labels"],
         order_by: ["sort_order", "-created_at", "-updated_at", "start_date", "priority"],
         type: [null, "active", "backlog"],
       },
@@ -324,7 +308,7 @@ export const ISSUE_DISPLAY_FILTERS_BY_LAYOUT: {
   },
   issues: {
     list: {
-      filters: ["priority", "state", "assignees", "created_by", "labels", "start_date", "target_date"],
+      filters: ["priority", "state", "assignees", "mentions", "created_by", "labels", "start_date", "target_date"],
       display_properties: true,
       display_filters: {
         group_by: ["state", "priority", "labels", "assignees", "created_by", null],
@@ -337,7 +321,7 @@ export const ISSUE_DISPLAY_FILTERS_BY_LAYOUT: {
       },
     },
     kanban: {
-      filters: ["priority", "state", "assignees", "created_by", "labels", "start_date", "target_date"],
+      filters: ["priority", "state", "assignees", "mentions", "created_by", "labels", "start_date", "target_date"],
       display_properties: true,
       display_filters: {
         group_by: ["state", "priority", "labels", "assignees", "created_by"],
@@ -351,7 +335,7 @@ export const ISSUE_DISPLAY_FILTERS_BY_LAYOUT: {
       },
     },
     calendar: {
-      filters: ["priority", "state", "assignees", "created_by", "labels", "start_date"],
+      filters: ["priority", "state", "assignees", "mentions", "created_by", "labels", "start_date"],
       display_properties: true,
       display_filters: {
         type: [null, "active", "backlog"],
@@ -362,7 +346,7 @@ export const ISSUE_DISPLAY_FILTERS_BY_LAYOUT: {
       },
     },
     spreadsheet: {
-      filters: ["priority", "state", "assignees", "created_by", "labels", "start_date", "target_date"],
+      filters: ["priority", "state", "assignees", "mentions", "created_by", "labels", "start_date", "target_date"],
       display_properties: true,
       display_filters: {
         order_by: ["sort_order", "-created_at", "-updated_at", "start_date", "priority"],
@@ -374,7 +358,7 @@ export const ISSUE_DISPLAY_FILTERS_BY_LAYOUT: {
       },
     },
     gantt_chart: {
-      filters: ["priority", "state", "assignees", "created_by", "labels", "start_date", "target_date"],
+      filters: ["priority", "state", "assignees", "mentions", "created_by", "labels", "start_date", "target_date"],
       display_properties: false,
       display_filters: {
         order_by: ["sort_order", "-created_at", "-updated_at", "start_date", "priority"],
@@ -394,7 +378,7 @@ export const getValueFromObject = (object: Object, key: string): string | number
   let value: any = object;
   if (!value || keys.length === 0) return null;
 
-  for (const _key of keys) value = value[_key];
+  for (const _key of keys) value = value?.[_key];
   return value;
 };
 
@@ -418,75 +402,4 @@ export const groupReactionEmojis = (reactions: any) => {
   }
 
   return _groupedEmojis;
-};
-
-/**
- *
- * @param workspaceDetail workspace detail to be added in the issue payload
- * @param projectDetail project detail to be added in the issue payload
- * @param formData partial issue data from the form. This will override the default values
- * @returns full issue payload with some default values
- */
-
-export const createIssuePayload: (
-  workspaceDetail: IWorkspace,
-  projectDetail: IProject,
-  formData: Partial<IIssue>
-) => IIssue = (workspaceDetail: IWorkspace, projectDetail: IProject, formData: Partial<IIssue>) => {
-  const payload = {
-    archived_at: null,
-    assignees: [],
-    assignee_details: [],
-    assignees_list: [],
-    attachment_count: 0,
-    attachments: [],
-    issue_relations: [],
-    related_issues: [],
-    bridge_id: null,
-    completed_at: new Date(),
-    created_at: "",
-    created_by: "",
-    cycle: null,
-    cycle_id: null,
-    cycle_detail: null,
-    description: {},
-    description_html: "",
-    description_stripped: "",
-    estimate_point: null,
-    issue_cycle: null,
-    issue_link: [],
-    issue_module: null,
-    labels: [],
-    label_details: [],
-    is_draft: false,
-    labels_list: [],
-    links_list: [],
-    link_count: 0,
-    module: null,
-    module_id: null,
-    name: "",
-    parent: null,
-    parent_detail: null,
-    priority: "none",
-    project: projectDetail.id,
-    project_detail: projectDetail,
-    sequence_id: 0,
-    sort_order: 0,
-    sprints: null,
-    start_date: null,
-    state: projectDetail.default_state,
-    state_detail: {} as any,
-    sub_issues_count: 0,
-    target_date: null,
-    updated_at: "",
-    updated_by: "",
-    workspace: workspaceDetail.id,
-    workspace_detail: workspaceDetail,
-    id: uuidv4(),
-    tempId: uuidv4(),
-    // to be overridden by the form data
-    ...formData,
-  } as IIssue;
-
-  return payload;
 };

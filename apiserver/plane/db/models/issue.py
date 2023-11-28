@@ -132,25 +132,8 @@ class Issue(ProjectBaseModel):
                     self.state = default_state
             except ImportError:
                 pass
-        else:
-            try:
-                from plane.db.models import State, PageBlock
 
-                # Check if the current issue state and completed state id are same
-                if self.state.group == "completed":
-                    self.completed_at = timezone.now()
-                    # check if there are any page blocks
-                    PageBlock.objects.filter(issue_id=self.id).filter().update(
-                        completed_at=timezone.now()
-                    )
-                else:
-                    PageBlock.objects.filter(issue_id=self.id).filter().update(
-                        completed_at=None
-                    )
-                    self.completed_at = None
 
-            except ImportError:
-                pass
         if self._state.adding:
             # Get the maximum display_id value from the database
             last_id = IssueSequence.objects.filter(project=self.project).aggregate(
@@ -226,7 +209,26 @@ class IssueRelation(ProjectBaseModel):
         ordering = ("-created_at",)
 
     def __str__(self):
-        return f"{self.issue.name} {self.related_issue.name}"
+        return f"{self.issue.name} {self.related_issue.name}"    
+    
+class IssueMention(ProjectBaseModel):
+    issue = models.ForeignKey(
+        Issue, on_delete=models.CASCADE, related_name="issue_mention"
+    )
+    mention = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="issue_mention",
+    )
+    class Meta:
+        unique_together = ["issue", "mention"]
+        verbose_name = "Issue Mention"
+        verbose_name_plural = "Issue Mentions"
+        db_table = "issue_mentions"
+        ordering = ("-created_at",)
+
+    def __str__(self):
+        return f"{self.issue.name} {self.mention.email}" 
 
 
 class IssueAssignee(ProjectBaseModel):
@@ -412,6 +414,7 @@ class Label(ProjectBaseModel):
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     color = models.CharField(max_length=255, blank=True)
+    sort_order = models.FloatField(default=65535)
 
     class Meta:
         unique_together = ["name", "project"]
@@ -419,6 +422,18 @@ class Label(ProjectBaseModel):
         verbose_name_plural = "Labels"
         db_table = "labels"
         ordering = ("-created_at",)
+
+    def save(self, *args, **kwargs):
+        if self._state.adding:
+            # Get the maximum sequence value from the database
+            last_id = Label.objects.filter(project=self.project).aggregate(
+                largest=models.Max("sort_order")
+            )["largest"]
+            # if last_id is not None
+            if last_id is not None:
+                self.sort_order = last_id + 10000
+
+        super(Label, self).save(*args, **kwargs)
 
     def __str__(self):
         return str(self.name)

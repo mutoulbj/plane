@@ -1,20 +1,23 @@
-import React from "react";
-
+import { ReactElement } from "react";
+// store
+import { observer } from "mobx-react-lite";
 // layouts
 import { AppLayout } from "layouts/app-layout";
-import { ProfileAuthWrapper } from "layouts/profile-layout";
+import { ProfileAuthWrapper } from "layouts/user-profile-layout";
 // components
 import { UserProfileHeader } from "components/headers";
-import { ProfileIssuesView } from "components/profile";
 // types
-import type { NextPage } from "next";
+import { NextPageWithLayout } from "types/app";
+import { ProfileIssuesPage } from "components/profile/profile-issues";
 
-const ProfileSubscribedIssues: NextPage = () => (
-  <AppLayout header={<UserProfileHeader />}>
-    <ProfileAuthWrapper>
-      <ProfileIssuesView />
-    </ProfileAuthWrapper>
-  </AppLayout>
-);
+const ProfileSubscribedIssuesPage: NextPageWithLayout = () => <ProfileIssuesPage type="subscribed" />;
 
-export default ProfileSubscribedIssues;
+ProfileSubscribedIssuesPage.getLayout = function getLayout(page: ReactElement) {
+  return (
+    <AppLayout header={<UserProfileHeader />}>
+      <ProfileAuthWrapper showProfileIssuesFilter>{page}</ProfileAuthWrapper>
+    </AppLayout>
+  );
+};
+
+export default observer(ProfileSubscribedIssuesPage);
