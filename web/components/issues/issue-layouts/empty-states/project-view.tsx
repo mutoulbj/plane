@@ -7,19 +7,15 @@ import { EmptyState } from "components/common";
 // assets
 import emptyIssue from "public/empty-state/issue.svg";
 import { EProjectStore } from "store/command-palette.store";
-import { useRouter } from "next/router";
 
 export const ProjectViewEmptyState: React.FC = observer(() => {
-  const router = useRouter();
-  const { viewId } = router.query as { viewId: string };
-
   const {
     commandPalette: commandPaletteStore,
     trackEvent: { setTrackElement },
   } = useMobxStore();
 
   return (
-    <div className="h-full w-full grid place-items-center">
+    <div className="grid h-full w-full place-items-center">
       <EmptyState
         title="View issues will appear here"
         description="Issues help you track individual pieces of work. With Issues, keep track of what's going on, who is working on it, and what's done."

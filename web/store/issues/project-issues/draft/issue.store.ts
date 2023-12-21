@@ -36,7 +36,7 @@ export class ProjectDraftIssuesStore extends IssueBaseStore implements IProjectD
   //viewData
   viewFlags = {
     enableQuickAdd: false,
-    enableIssueCreation: false,
+    enableIssueCreation: true,
     enableInlineEditing: false,
   };
 
@@ -63,7 +63,8 @@ export class ProjectDraftIssuesStore extends IssueBaseStore implements IProjectD
     autorun(() => {
       const workspaceSlug = this.rootStore.workspace.workspaceSlug;
       const projectId = this.rootStore.project.projectId;
-      if (!workspaceSlug || !projectId) return;
+      const hasPermissionToCurrentProject = this.rootStore.user.hasPermissionToCurrentProject;
+      if (!workspaceSlug || !projectId || !hasPermissionToCurrentProject) return;
 
       const userFilters = this.rootStore?.projectDraftIssuesFilter?.issueFilters?.filters;
       if (userFilters) this.fetchIssues(workspaceSlug, projectId, "mutation");
@@ -107,7 +108,7 @@ export class ProjectDraftIssuesStore extends IssueBaseStore implements IProjectD
       this.loader = loadType;
 
       const params = this.rootStore?.projectDraftIssuesFilter?.appliedFilters;
-      const response = await this.issueDraftService.getV3DraftIssues(workspaceSlug, projectId, params);
+      const response = await this.issueDraftService.getDraftIssues(workspaceSlug, projectId, params);
 
       const _issues = { ...this.issues, [projectId]: { ...response } };
 
@@ -156,6 +157,12 @@ export class ProjectDraftIssuesStore extends IssueBaseStore implements IProjectD
       });
 
       const response = await this.issueDraftService.updateDraftIssue(workspaceSlug, projectId, issueId, data);
+
+      runInAction(() => {
+        _issues = { ...this.issues };
+        _issues[projectId][issueId] = { ..._issues[projectId][issueId], ...response };
+        this.issues = _issues;
+      });
 
       return response;
     } catch (error) {

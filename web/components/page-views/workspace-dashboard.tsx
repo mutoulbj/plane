@@ -1,5 +1,4 @@
 import { useState } from "react";
-import Image from "next/image";
 import { useRouter } from "next/router";
 import useSWR from "swr";
 import { observer } from "mobx-react-lite";
@@ -9,9 +8,11 @@ import { useMobxStore } from "lib/mobx/store-provider";
 import { TourRoot } from "components/onboarding";
 import { UserGreetingsView } from "components/user";
 import { CompletedIssuesGraph, IssuesList, IssuesPieChart, IssuesStats } from "components/workspace";
-import { Button } from "@plane/ui";
+// constants
+import { EUserWorkspaceRoles } from "constants/workspace";
 // images
-import emptyDashboard from "public/empty-state/dashboard.svg";
+import { NewEmptyState } from "components/common/new-empty-state";
+import emptyProject from "public/empty-state/dashboard_empty_project.webp";
 
 export const WorkspaceDashboardView = observer(() => {
   // router
@@ -19,7 +20,12 @@ export const WorkspaceDashboardView = observer(() => {
   const { workspaceSlug } = router.query;
   // store
 
-  const { user: userStore, project: projectStore, commandPalette: commandPaletteStore, trackEvent: { setTrackElement } } = useMobxStore();
+  const {
+    user: userStore,
+    project: projectStore,
+    commandPalette: commandPaletteStore,
+    trackEvent: { setTrackElement, postHogEventTracker },
+  } = useMobxStore();
 
   const user = userStore.currentUser;
   const projects = workspaceSlug ? projectStore.projects[workspaceSlug.toString()] : null;
@@ -32,8 +38,21 @@ export const WorkspaceDashboardView = observer(() => {
     workspaceSlug ? () => userStore.fetchUserDashboardInfo(workspaceSlug.toString(), month) : null
   );
 
+  const isEditingAllowed = !!userStore.currentProjectRole && userStore.currentProjectRole >= EUserWorkspaceRoles.MEMBER;
+
   const handleTourCompleted = () => {
-    userStore.updateTourCompleted();
+    userStore
+      .updateTourCompleted()
+      .then(() => {
+        postHogEventTracker("USER_TOUR_COMPLETE", {
+          user_id: user?.id,
+          email: user?.email,
+          state: "SUCCESS",
+        });
+      })
+      .catch((error) => {
+        console.log(error);
+      });
   };
 
   return (
@@ -42,11 +61,11 @@ export const WorkspaceDashboardView = observer(() => {
         <ProductUpdatesModal isOpen={isProductUpdatesModalOpen} setIsOpen={setIsProductUpdatesModalOpen} />
       )} */}
       {user && !user.is_tour_completed && (
-        <div className="fixed top-0 left-0 h-full w-full bg-custom-backdrop bg-opacity-50 transition-opacity z-20 grid place-items-center">
+        <div className="fixed left-0 top-0 z-20 grid h-full w-full place-items-center bg-custom-backdrop bg-opacity-50 transition-opacity">
           <TourRoot onComplete={handleTourCompleted} />
         </div>
       )}
-      <div className="p-8 space-y-8">
+      <div className="space-y-8 p-8">
         {user && <UserGreetingsView user={user} />}
 
         {projects ? (
@@ -65,22 +84,28 @@ export const WorkspaceDashboardView = observer(() => {
               </div>
             </div>
           ) : (
-            <div className="bg-custom-primary-100/5 flex justify-between gap-5 md:gap-8">
-              <div className="p-5 md:p-8 pr-0">
-                <h5 className="text-xl font-semibold">Create a project</h5>
-                <p className="mt-2 mb-5">Manage your projects by creating issues, cycles, modules, views and pages.</p>
-                <Button variant="primary" size="sm" onClick={() => {
-                    setTrackElement("DASHBOARD_PAGE");
-                    commandPaletteStore.toggleCreateProjectModal(true)
-                  }
-                }>
-                  Create Project
-                </Button>
-              </div>
-              <div className="hidden md:block self-end overflow-hidden pt-8">
-                <Image src={emptyDashboard} alt="Empty Dashboard" />
-              </div>
-            </div>
+            <NewEmptyState
+              image={emptyProject}
+              title="Overview of your projects, activity, and metrics"
+              description="When you have created a project and have issues assigned, you will see metrics, activity, and things you care about here. This is personalized to your role in projects, so project admins will see more than members."
+              comicBox={{
+                title: "Everything starts with a project in Plane",
+                direction: "right",
+                description: "A project could be a product’s roadmap, a marketing campaign, or launching a new car.",
+              }}
+              primaryButton={
+                isEditingAllowed
+                  ? {
+                      text: "Build your first project",
+                      onClick: () => {
+                        setTrackElement("DASHBOARD_PAGE");
+                        commandPaletteStore.toggleCreateProjectModal(true);
+                      },
+                    }
+                  : null
+              }
+              disabled={!isEditingAllowed}
+            />
           )
         ) : null}
       </div>

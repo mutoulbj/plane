@@ -17,7 +17,7 @@ from plane.license.models import Instance, InstanceAdmin
 from plane.utils.paginator import BasePaginator
 
 
-from django.db.models import Q, F, Count, Case, When, Value, IntegerField
+from django.db.models import Q, F, Count, Case, When, IntegerField
 
 
 class UserEndpoint(BaseViewSet):
@@ -49,10 +49,13 @@ class UserEndpoint(BaseViewSet):
         # Check all workspace user is active
         user = self.get_object()
 
+        # Instance admin check
+        if InstanceAdmin.objects.filter(user=user).exists():
+            return Response({"error": "You cannot deactivate your account since you are an instance admin"}, status=status.HTTP_400_BAD_REQUEST)
+
         projects_to_deactivate = []
         workspaces_to_deactivate = []
 
-        
         projects = ProjectMember.objects.filter(
             member=request.user, is_active=True
         ).annotate(
@@ -113,6 +116,15 @@ class UserEndpoint(BaseViewSet):
 
         # Deactivate the user
         user.is_active = False
+        user.last_workspace_id = None
+        user.is_tour_completed = False
+        user.is_onboarded = False
+        user.onboarding_step = {
+            "workspace_join": False,
+            "profile_complete": False,
+            "workspace_create": False,
+            "workspace_invite": False,
+        }
         user.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -135,9 +147,9 @@ class UpdateUserTourCompletedEndpoint(BaseAPIView):
 
 class UserActivityEndpoint(BaseAPIView, BasePaginator):
     def get(self, request):
-        queryset = IssueActivity.objects.filter(
-            actor=request.user
-        ).select_related("actor", "workspace", "issue", "project")
+        queryset = IssueActivity.objects.filter(actor=request.user).select_related(
+            "actor", "workspace", "issue", "project"
+        )
 
         return self.paginate(
             request=request,
@@ -146,3 +158,4 @@ class UserActivityEndpoint(BaseAPIView, BasePaginator):
                 issue_activities, many=True
             ).data,
         )
+

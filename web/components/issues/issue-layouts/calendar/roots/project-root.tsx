@@ -10,34 +10,47 @@ import { useRouter } from "next/router";
 
 export const CalendarLayout: React.FC = observer(() => {
   const router = useRouter();
-  const { workspaceSlug } = router.query as { workspaceSlug: string };
+  const { workspaceSlug, projectId } = router.query;
 
   const {
     projectIssues: issueStore,
-    issueCalendarView: issueCalendarViewStore,
     projectIssuesFilter: projectIssueFiltersStore,
+    calendarHelpers: { handleDragDrop: handleCalenderDragDrop },
   } = useMobxStore();
 
   const issueActions = {
     [EIssueActions.UPDATE]: async (issue: IIssue) => {
       if (!workspaceSlug) return;
 
-      issueStore.updateIssue(workspaceSlug.toString(), issue.project, issue.id, issue);
+      await issueStore.updateIssue(workspaceSlug.toString(), issue.project, issue.id, issue);
     },
     [EIssueActions.DELETE]: async (issue: IIssue) => {
       if (!workspaceSlug) return;
 
-      issueStore.removeIssue(workspaceSlug.toString(), issue.project, issue.id);
+      await issueStore.removeIssue(workspaceSlug.toString(), issue.project, issue.id);
     },
+  };
+
+  const handleDragDrop = async (source: any, destination: any, issues: IIssue[], issueWithIds: any) => {
+    if (workspaceSlug && projectId)
+      await handleCalenderDragDrop(
+        source,
+        destination,
+        workspaceSlug.toString(),
+        projectId.toString(),
+        issueStore,
+        issues,
+        issueWithIds
+      );
   };
 
   return (
     <BaseCalendarRoot
       issueStore={issueStore}
       issuesFilterStore={projectIssueFiltersStore}
-      calendarViewStore={issueCalendarViewStore}
       QuickActions={ProjectIssueQuickActions}
       issueActions={issueActions}
+      handleDragDrop={handleDragDrop}
     />
   );
 });

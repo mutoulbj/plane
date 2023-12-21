@@ -49,24 +49,10 @@ NGINX_PORT=80
 ​
 
 ```
-# Enable/Disable OAUTH - default 0 for selfhosted instance
-NEXT_PUBLIC_ENABLE_OAUTH=0
 # Public boards deploy URL
 NEXT_PUBLIC_DEPLOY_URL="http://localhost/spaces"
 ```
 
-​
-
-## {PROJECT_FOLDER}/spaces/.env.example
-
-​
-
-```
-# Flag to toggle OAuth
-NEXT_PUBLIC_ENABLE_OAUTH=0
-```
-
-​
 
 ## {PROJECT_FOLDER}/apiserver/.env
 
@@ -76,7 +62,7 @@ NEXT_PUBLIC_ENABLE_OAUTH=0
 # Backend
 # Debug value for api server use it as 0 for production use
 DEBUG=0
-DJANGO_SETTINGS_MODULE="plane.settings.selfhosted" # deprecated
+DJANGO_SETTINGS_MODULE="plane.settings.selfhosted"
 ​
 # Error logs
 SENTRY_DSN=""

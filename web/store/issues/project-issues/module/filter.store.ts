@@ -11,6 +11,7 @@ import { handleIssueQueryParamsByLayout } from "helpers/issue.helper";
 import { RootStore } from "store/root";
 import { IIssueDisplayFilterOptions, IIssueDisplayProperties, IIssueFilterOptions, TIssueParams } from "types";
 import { EFilterType } from "store/issues/types";
+import { isNil } from "../utils";
 
 interface IModuleIssuesFilterOptions {
   filters: IIssueFilterOptions;
@@ -118,9 +119,13 @@ export class ModuleIssuesFilterStore extends IssueFilterBaseStore implements IMo
       start_date: userFilters?.filters?.start_date || undefined,
       target_date: userFilters?.filters?.target_date || undefined,
       type: userFilters?.displayFilters?.type || undefined,
-      sub_issue: userFilters?.displayFilters?.sub_issue || true,
-      show_empty_groups: userFilters?.displayFilters?.show_empty_groups || true,
-      start_target_date: userFilters?.displayFilters?.start_target_date || true,
+      sub_issue: isNil(userFilters?.displayFilters?.sub_issue) ? true : userFilters?.displayFilters?.sub_issue,
+      show_empty_groups: isNil(userFilters?.displayFilters?.show_empty_groups)
+        ? true
+        : userFilters?.displayFilters?.show_empty_groups,
+      start_target_date: isNil(userFilters?.displayFilters?.start_target_date)
+        ? true
+        : userFilters?.displayFilters?.start_target_date,
     };
 
     const filteredParams = handleIssueQueryParamsByLayout(userFilters?.displayFilters?.layout, "issues");
@@ -165,7 +170,7 @@ export class ModuleIssuesFilterStore extends IssueFilterBaseStore implements IMo
 
       return filters;
     } catch (error) {
-      this.fetchFilters(workspaceSlug, projectId, moduleId);
+      console.log("error in moduleFetchFilters", error);
       throw error;
     }
   };
@@ -211,7 +216,7 @@ export class ModuleIssuesFilterStore extends IssueFilterBaseStore implements IMo
       await this.fetchModuleFilters(workspaceSlug, projectId, moduleId);
       return;
     } catch (error) {
-      this.fetchFilters(workspaceSlug, projectId, moduleId);
+      console.log("error in projectFetchFilters", error);
       throw error;
     }
   };

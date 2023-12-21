@@ -40,8 +40,6 @@ export const Workspace: React.FC<Props> = (props) => {
 
   const handleCreateWorkspace = async (formData: IWorkspace) => {
     if (isSubmitting) return;
-    const slug = formData.slug.split("/");
-    formData.slug = slug[slug.length - 1];
 
     await workspaceService
       .workspaceSlugCheck(formData.slug)
@@ -95,7 +93,7 @@ export const Workspace: React.FC<Props> = (props) => {
   return (
     <form className="mt-5 md:w-2/3" onSubmit={handleSubmit(handleCreateWorkspace)}>
       <div className="mb-5">
-        <p className="text-base text-custom-text-400 mb-1">Name it.</p>
+        <p className="mb-1 text-base text-custom-text-400">Name it.</p>
         <Controller
           control={control}
           name="name"
@@ -109,7 +107,7 @@ export const Workspace: React.FC<Props> = (props) => {
             },
           }}
           render={({ field: { value, ref, onChange } }) => (
-            <div className="flex items-center relative rounded-md bg-onboarding-background-200">
+            <div className="relative flex items-center rounded-md bg-onboarding-background-200">
               <Input
                 id="name"
                 name="name"
@@ -118,45 +116,40 @@ export const Workspace: React.FC<Props> = (props) => {
                 onChange={(event) => {
                   onChange(event.target.value);
                   setValue("name", event.target.value);
-                  if (window && window.location.host) {
-                    const host = window.location.host;
-                    const slug = event.currentTarget.value.split("/");
-                    setValue("slug", `${host}/${slug[slug.length - 1].toLocaleLowerCase().trim().replace(/ /g, "-")}`);
-                  }
+                  setValue("slug", event.target.value.toLocaleLowerCase().trim().replace(/ /g, "-"));
                 }}
                 placeholder="Enter workspace name..."
                 ref={ref}
                 hasError={Boolean(errors.name)}
-                className="w-full h-[46px] text-base placeholder:text-custom-text-400/50 placeholder:text-base border-onboarding-border-100"
+                className="h-[46px] w-full border-onboarding-border-100 text-base placeholder:text-base placeholder:text-custom-text-400/50"
               />
             </div>
           )}
         />
         {errors.name && <span className="text-sm text-red-500">{errors.name.message}</span>}
-        <p className="text-base text-custom-text-400 mt-4 mb-1">You can edit the slug.</p>
+        <p className="mb-1 mt-4 text-base text-custom-text-400">You can edit the slug.</p>
         <Controller
           control={control}
           name="slug"
-          render={({ field: { value, ref } }) => (
-            <div className="flex items-center relative rounded-md bg-onboarding-background-200">
+          render={({ field: { value, ref, onChange } }) => (
+            <div
+              className={`relative flex items-center rounded-md border bg-onboarding-background-200 px-3 ${
+                invalidSlug ? "border-red-500" : "border-onboarding-border-100"
+              } `}
+            >
+              <span className="whitespace-nowrap text-sm">{window && window.location.host}/</span>
               <Input
                 id="slug"
                 name="slug"
                 type="text"
                 value={value.toLocaleLowerCase().trim().replace(/ /g, "-")}
                 onChange={(e) => {
-                  const host = window.location.host;
-                  const slug = e.currentTarget.value.split("/");
-                  if (slug.length > 1) {
-                    /^[a-zA-Z0-9_-]+$/.test(slug[slug.length - 1]) ? setInvalidSlug(false) : setInvalidSlug(true);
-                    setValue("slug", `${host}/${slug[slug.length - 1].toLocaleLowerCase().trim().replace(/ /g, "-")}`);
-                  } else {
-                    setValue("slug", `${host}/`);
-                  }
+                  /^[a-zA-Z0-9_-]+$/.test(e.target.value) ? setInvalidSlug(false) : setInvalidSlug(true);
+                  onChange(e.target.value.toLowerCase());
                 }}
                 ref={ref}
                 hasError={Boolean(errors.slug)}
-                className="w-full h-[46px] border-onboarding-border-100"
+                className="h-[46px] w-full border-none !px-0"
               />
             </div>
           )}

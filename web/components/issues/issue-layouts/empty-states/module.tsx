@@ -10,6 +10,8 @@ import { useMobxStore } from "lib/mobx/store-provider";
 import { ISearchIssueResponse } from "types";
 import useToast from "hooks/use-toast";
 import { useState } from "react";
+// constants
+import { EUserWorkspaceRoles } from "constants/workspace";
 
 type Props = {
   workspaceSlug: string | undefined;
@@ -22,7 +24,12 @@ export const ModuleEmptyState: React.FC<Props> = observer((props) => {
   // states
   const [moduleIssuesListModal, setModuleIssuesListModal] = useState(false);
 
-  const { moduleIssue: moduleIssueStore, commandPalette: commandPaletteStore, trackEvent: { setTrackElement } } = useMobxStore();
+  const {
+    moduleIssues: moduleIssueStore,
+    commandPalette: commandPaletteStore,
+    trackEvent: { setTrackElement },
+    user: { currentProjectRole: userRole },
+  } = useMobxStore();
 
   const { setToastAlert } = useToast();
 
@@ -31,16 +38,16 @@ export const ModuleEmptyState: React.FC<Props> = observer((props) => {
 
     const issueIds = data.map((i) => i.id);
 
-    await moduleIssueStore
-      .addIssueToModule(workspaceSlug.toString(), projectId.toString(), moduleId.toString(), issueIds)
-      .catch(() =>
-        setToastAlert({
-          type: "error",
-          title: "Error!",
-          message: "Selected issues could not be added to the module. Please try again.",
-        })
-      );
+    await moduleIssueStore.addIssueToModule(workspaceSlug.toString(), moduleId.toString(), issueIds).catch(() =>
+      setToastAlert({
+        type: "error",
+        title: "Error!",
+        message: "Selected issues could not be added to the module. Please try again.",
+      })
+    );
   };
+
+  const isEditingAllowed = !!userRole && userRole >= EUserWorkspaceRoles.MEMBER;
 
   return (
     <>
@@ -50,7 +57,7 @@ export const ModuleEmptyState: React.FC<Props> = observer((props) => {
         searchParams={{ module: true }}
         handleOnSubmit={handleAddIssuesToModule}
       />
-      <div className="h-full w-full grid place-items-center">
+      <div className="grid h-full w-full place-items-center">
         <EmptyState
           title="Module issues will appear here"
           description="Issues help you track individual pieces of work. With Issues, keep track of what's going on, who is working on it, and what's done."
@@ -60,18 +67,20 @@ export const ModuleEmptyState: React.FC<Props> = observer((props) => {
             icon: <PlusIcon className="h-3 w-3" strokeWidth={2} />,
             onClick: () => {
               setTrackElement("MODULE_EMPTY_STATE");
-              commandPaletteStore.toggleCreateIssueModal(true)
-            }
+              commandPaletteStore.toggleCreateIssueModal(true);
+            },
           }}
           secondaryButton={
             <Button
               variant="neutral-primary"
               prependIcon={<PlusIcon className="h-3 w-3" strokeWidth={2} />}
               onClick={() => setModuleIssuesListModal(true)}
+              disabled={!isEditingAllowed}
             >
               Add an existing issue
             </Button>
           }
+          disabled={!isEditingAllowed}
         />
       </div>
     </>

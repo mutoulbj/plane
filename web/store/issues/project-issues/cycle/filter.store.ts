@@ -11,6 +11,7 @@ import { handleIssueQueryParamsByLayout } from "helpers/issue.helper";
 import { RootStore } from "store/root";
 import { IIssueDisplayFilterOptions, IIssueDisplayProperties, IIssueFilterOptions, TIssueParams } from "types";
 import { EFilterType } from "store/issues/types";
+import { isNil } from "../utils";
 
 interface ICycleIssuesFilterOptions {
   filters: IIssueFilterOptions;
@@ -118,9 +119,13 @@ export class CycleIssuesFilterStore extends IssueFilterBaseStore implements ICyc
       start_date: userFilters?.filters?.start_date || undefined,
       target_date: userFilters?.filters?.target_date || undefined,
       type: userFilters?.displayFilters?.type || undefined,
-      sub_issue: userFilters?.displayFilters?.sub_issue || true,
-      show_empty_groups: userFilters?.displayFilters?.show_empty_groups || true,
-      start_target_date: userFilters?.displayFilters?.start_target_date || true,
+      sub_issue: isNil(userFilters?.displayFilters?.sub_issue) ? true : userFilters?.displayFilters?.sub_issue,
+      show_empty_groups: isNil(userFilters?.displayFilters?.show_empty_groups)
+        ? true
+        : userFilters?.displayFilters?.show_empty_groups,
+      start_target_date: isNil(userFilters?.displayFilters?.start_target_date)
+        ? true
+        : userFilters?.displayFilters?.start_target_date,
     };
 
     const filteredParams = handleIssueQueryParamsByLayout(userFilters?.displayFilters?.layout, "issues");
@@ -165,7 +170,7 @@ export class CycleIssuesFilterStore extends IssueFilterBaseStore implements ICyc
 
       return filters;
     } catch (error) {
-      this.fetchFilters(workspaceSlug, projectId, cycleId);
+      console.log("error in fetchCycleFilters", error);
       throw error;
     }
   };
@@ -210,7 +215,7 @@ export class CycleIssuesFilterStore extends IssueFilterBaseStore implements ICyc
       await this.fetchCycleFilters(workspaceSlug, projectId, cycleId);
       return;
     } catch (error) {
-      this.fetchFilters(workspaceSlug, projectId, cycleId);
+      console.log("error in cycleFetchFilters", error);
       throw error;
     }
   };

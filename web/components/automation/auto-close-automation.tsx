@@ -11,6 +11,7 @@ import { ArchiveX } from "lucide-react";
 import { IProject } from "types";
 // fetch keys
 import { PROJECT_AUTOMATION_MONTHS } from "constants/project";
+import { EUserWorkspaceRoles } from "constants/workspace";
 
 type Props = {
   handleChange: (formData: Partial<IProject>) => Promise<void>;
@@ -53,6 +54,8 @@ export const AutoCloseAutomation: React.FC<Props> = observer((props) => {
     default_state: defaultState,
   };
 
+  const isAdmin = userRole === EUserWorkspaceRoles.ADMIN;
+
   return (
     <>
       <SelectMonthModal
@@ -65,12 +68,12 @@ export const AutoCloseAutomation: React.FC<Props> = observer((props) => {
       <div className="flex flex-col gap-4 border-b border-custom-border-200 px-4 py-6">
         <div className="flex items-center justify-between">
           <div className="flex items-start gap-3">
-            <div className="flex items-center justify-center p-3 rounded bg-custom-background-90">
-              <ArchiveX className="h-4 w-4 text-red-500 flex-shrink-0" />
+            <div className="flex items-center justify-center rounded bg-custom-background-90 p-3">
+              <ArchiveX className="h-4 w-4 flex-shrink-0 text-red-500" />
             </div>
             <div className="">
               <h4 className="text-sm font-medium">Auto-close issues</h4>
-              <p className="text-sm text-custom-text-200 tracking-tight">
+              <p className="text-sm tracking-tight text-custom-text-200">
                 Plane will automatically close issue that haven{"'"}t been completed or cancelled.
               </p>
             </div>
@@ -83,15 +86,15 @@ export const AutoCloseAutomation: React.FC<Props> = observer((props) => {
                 : handleChange({ close_in: 0, default_state: null })
             }
             size="sm"
-            disabled={userRole !== 20}
+            disabled={!isAdmin}
           />
         </div>
 
         {projectDetails ? (
           projectDetails.close_in !== 0 && (
             <div className="ml-12">
-              <div className="flex flex-col rounded bg-custom-background-90 border border-custom-border-200">
-                <div className="flex items-center justify-between px-5 py-4 gap-2 w-full">
+              <div className="flex flex-col rounded border border-custom-border-200 bg-custom-background-90">
+                <div className="flex w-full items-center justify-between gap-2 px-5 py-4">
                   <div className="w-1/2 text-sm font-medium">Auto-close issues that are inactive for</div>
                   <div className="w-1/2">
                     <CustomSelect
@@ -102,7 +105,7 @@ export const AutoCloseAutomation: React.FC<Props> = observer((props) => {
                       }}
                       input
                       width="w-full"
-                      disabled={userRole !== 20}
+                      disabled={!isAdmin}
                     >
                       <>
                         {PROJECT_AUTOMATION_MONTHS.map((month) => (
@@ -122,7 +125,7 @@ export const AutoCloseAutomation: React.FC<Props> = observer((props) => {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between px-5 py-4 gap-2 w-full">
+                <div className="flex w-full items-center justify-between gap-2 px-5 py-4">
                   <div className="w-1/2 text-sm font-medium">Auto-close Status</div>
                   <div className="w-1/2 ">
                     <CustomSearchSelect

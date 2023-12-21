@@ -1,6 +1,7 @@
 import { FC, ReactNode } from "react";
 import { useRouter } from "next/router";
 import useSWR from "swr";
+import useSWRImmutable from "swr/immutable";
 // ui
 import { Spinner } from "@plane/ui";
 // store
@@ -21,7 +22,6 @@ export const UserAuthWrapper: FC<IUserAuthWrapper> = observer((props) => {
       fetchCurrentUser,
       fetchCurrentUserInstanceAdminStatus,
       fetchCurrentUserSettings,
-      
     },
     workspace: { fetchWorkspaces },
   } = useMobxStore();
@@ -32,7 +32,7 @@ export const UserAuthWrapper: FC<IUserAuthWrapper> = observer((props) => {
     shouldRetryOnError: false,
   });
   // fetching current user instance admin status
-  useSWR("CURRENT_USER_INSTANCE_ADMIN_STATUS", () => fetchCurrentUserInstanceAdminStatus(), {
+  useSWRImmutable("CURRENT_USER_INSTANCE_ADMIN_STATUS", () => fetchCurrentUserInstanceAdminStatus(), {
     shouldRetryOnError: false,
   });
   // fetching user settings
@@ -46,7 +46,7 @@ export const UserAuthWrapper: FC<IUserAuthWrapper> = observer((props) => {
 
   if (!currentUser && !currentUserError) {
     return (
-      <div className="h-screen grid place-items-center p-4 bg-custom-background-100">
+      <div className="grid h-screen place-items-center bg-custom-background-100 p-4">
         <div className="flex flex-col items-center gap-3 text-center">
           <Spinner />
         </div>

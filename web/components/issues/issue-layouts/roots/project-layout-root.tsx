@@ -26,47 +26,42 @@ export const ProjectLayoutRoot: React.FC = observer(() => {
     projectIssuesFilter: { issueFilters, fetchFilters },
   } = useMobxStore();
 
-  useSWR(
-    workspaceSlug && projectId ? `PROJECT_ISSUES_V3_${workspaceSlug}_${projectId}` : null,
-    async () => {
-      if (workspaceSlug && projectId) {
-        await fetchFilters(workspaceSlug, projectId);
-        await fetchIssues(workspaceSlug, projectId, getIssues ? "mutation" : "init-loader");
-      }
-    },
-    {
-      onErrorRetry: (error) => {
-        if (error.status === 404) return;
-      },
+  useSWR(workspaceSlug && projectId ? `PROJECT_ISSUES_V3_${workspaceSlug}_${projectId}` : null, async () => {
+    if (workspaceSlug && projectId) {
+      await fetchFilters(workspaceSlug.toString(), projectId.toString());
+      await fetchIssues(workspaceSlug.toString(), projectId.toString(), getIssues ? "mutation" : "init-loader");
     }
-  );
+  });
 
   const activeLayout = issueFilters?.displayFilters?.layout;
 
   return (
-    <div className="relative w-full h-full flex flex-col overflow-hidden">
+    <div className="relative flex h-full w-full flex-col overflow-hidden">
       <ProjectAppliedFiltersRoot />
 
-      {loader === "init-loader" ? (
-        <div className="w-full h-full flex justify-center items-center">
+      {loader === "init-loader" || !getIssues ? (
+        <div className="flex h-full w-full items-center justify-center">
           <Spinner />
         </div>
       ) : (
         <>
-          {/* {(activeLayout === "list" || activeLayout === "spreadsheet") && issueCount === 0 && <ProjectEmptyState />} */}
-          <div className="w-full h-full relative overflow-auto">
-            {activeLayout === "list" ? (
-              <ListLayout />
-            ) : activeLayout === "kanban" ? (
-              <KanBanLayout />
-            ) : activeLayout === "calendar" ? (
-              <CalendarLayout />
-            ) : activeLayout === "gantt_chart" ? (
-              <GanttLayout />
-            ) : activeLayout === "spreadsheet" ? (
-              <ProjectSpreadsheetLayout />
-            ) : null}
-          </div>
+          {Object.keys(getIssues ?? {}).length == 0 ? (
+            <ProjectEmptyState />
+          ) : (
+            <div className="relative h-full w-full overflow-auto">
+              {activeLayout === "list" ? (
+                <ListLayout />
+              ) : activeLayout === "kanban" ? (
+                <KanBanLayout />
+              ) : activeLayout === "calendar" ? (
+                <CalendarLayout />
+              ) : activeLayout === "gantt_chart" ? (
+                <GanttLayout />
+              ) : activeLayout === "spreadsheet" ? (
+                <ProjectSpreadsheetLayout />
+              ) : null}
+            </div>
+          )}
         </>
       )}
     </div>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import useSWR from "swr";
@@ -24,7 +24,14 @@ import { IIssueAttachment } from "types";
 const issueAttachmentService = new IssueAttachmentService();
 const projectMemberService = new ProjectMemberService();
 
-export const IssueAttachments = () => {
+type Props = {
+  editable: boolean;
+};
+
+export const IssueAttachments: React.FC<Props> = (props) => {
+  const { editable } = props;
+
+  // states
   const [deleteAttachment, setDeleteAttachment] = useState<IIssueAttachment | null>(null);
   const [attachmentDeleteModal, setAttachmentDeleteModal] = useState<boolean>(false);
 
@@ -59,43 +66,43 @@ export const IssueAttachments = () => {
             key={file.id}
             className="flex h-[60px] items-center justify-between gap-1 rounded-md border-[2px] border-custom-border-200 bg-custom-background-100 px-4 py-2 text-sm"
           >
-            <Link href={file.asset}>
-              <a target="_blank">
-                <div className="flex items-center gap-3">
-                  <div className="h-7 w-7">{getFileIcon(getFileExtension(file.asset))}</div>
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-2">
-                      <Tooltip tooltipContent={getFileName(file.attributes.name)}>
-                        <span className="text-sm">{truncateText(`${getFileName(file.attributes.name)}`, 10)}</span>
-                      </Tooltip>
-                      <Tooltip
-                        tooltipContent={`${
-                          people?.find((person) => person.member.id === file.updated_by)?.member.display_name ?? ""
-                        } uploaded on ${renderLongDateFormat(file.updated_at)}`}
-                      >
-                        <span>
-                          <AlertCircle className="h-3 w-3" />
-                        </span>
-                      </Tooltip>
-                    </div>
+            <Link href={file.asset} target="_blank" rel="noopener noreferrer">
+              <div className="flex items-center gap-3">
+                <div className="h-7 w-7">{getFileIcon(getFileExtension(file.asset))}</div>
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-2">
+                    <Tooltip tooltipContent={getFileName(file.attributes.name)}>
+                      <span className="text-sm">{truncateText(`${getFileName(file.attributes.name)}`, 10)}</span>
+                    </Tooltip>
+                    <Tooltip
+                      tooltipContent={`${
+                        people?.find((person) => person.member.id === file.updated_by)?.member.display_name ?? ""
+                      } uploaded on ${renderLongDateFormat(file.updated_at)}`}
+                    >
+                      <span>
+                        <AlertCircle className="h-3 w-3" />
+                      </span>
+                    </Tooltip>
+                  </div>
 
-                    <div className="flex items-center gap-3 text-xs text-custom-text-200">
-                      <span>{getFileExtension(file.asset).toUpperCase()}</span>
-                      <span>{convertBytesToSize(file.attributes.size)}</span>
-                    </div>
+                  <div className="flex items-center gap-3 text-xs text-custom-text-200">
+                    <span>{getFileExtension(file.asset).toUpperCase()}</span>
+                    <span>{convertBytesToSize(file.attributes.size)}</span>
                   </div>
                 </div>
-              </a>
+              </div>
             </Link>
 
-            <button
-              onClick={() => {
-                setDeleteAttachment(file);
-                setAttachmentDeleteModal(true);
-              }}
-            >
-              <X className="h-4 w-4 text-custom-text-200 hover:text-custom-text-100" />
-            </button>
+            {editable && (
+              <button
+                onClick={() => {
+                  setDeleteAttachment(file);
+                  setAttachmentDeleteModal(true);
+                }}
+              >
+                <X className="h-4 w-4 text-custom-text-200 hover:text-custom-text-100" />
+              </button>
+            )}
           </div>
         ))}
     </>

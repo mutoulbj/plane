@@ -9,10 +9,11 @@ type Props = {
   handleRemove: (val: string) => void;
   labels: IIssueLabel[] | undefined;
   values: string[];
+  editable: boolean | undefined;
 };
 
 export const AppliedLabelsFilters: React.FC<Props> = observer((props) => {
-  const { handleRemove, labels, values } = props;
+  const { handleRemove, labels, values, editable } = props;
 
   return (
     <>
@@ -22,7 +23,7 @@ export const AppliedLabelsFilters: React.FC<Props> = observer((props) => {
         if (!labelDetails) return null;
 
         return (
-          <div key={labelId} className="text-xs flex items-center gap-1 bg-custom-background-80 p-1 rounded">
+          <div key={labelId} className="flex items-center gap-1 rounded bg-custom-background-80 p-1 text-xs">
             <span
               className="h-1.5 w-1.5 rounded-full"
               style={{
@@ -30,13 +31,15 @@ export const AppliedLabelsFilters: React.FC<Props> = observer((props) => {
               }}
             />
             <span className="normal-case">{labelDetails.name}</span>
-            <button
-              type="button"
-              className="grid place-items-center text-custom-text-300 hover:text-custom-text-200"
-              onClick={() => handleRemove(labelId)}
-            >
-              <X size={10} strokeWidth={2} />
-            </button>
+            {editable && (
+              <button
+                type="button"
+                className="grid place-items-center text-custom-text-300 hover:text-custom-text-200"
+                onClick={() => handleRemove(labelId)}
+              >
+                <X size={10} strokeWidth={2} />
+              </button>
+            )}
           </div>
         );
       })}

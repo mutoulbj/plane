@@ -57,7 +57,8 @@ class PageLog(ProjectBaseModel):
         ("module", "Module"),
         ("back_link", "Back Link"),
         ("forward_link", "Forward Link"),
-        ("mention", "Mention"),
+        ("page_mention", "Page Mention"),
+        ("user_mention", "User Mention"),
     )
     transaction = models.UUIDField(default=uuid.uuid4)
     page = models.ForeignKey(
@@ -76,7 +77,7 @@ class PageLog(ProjectBaseModel):
         verbose_name_plural = "Page Logs"
         db_table = "page_logs"
         ordering = ("-created_at",)
-    
+
     def __str__(self):
         return f"{self.page.name} {self.type}"
 

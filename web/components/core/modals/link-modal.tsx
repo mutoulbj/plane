@@ -7,15 +7,15 @@ import { Dialog, Transition } from "@headlessui/react";
 // ui
 import { Button, Input } from "@plane/ui";
 // types
-import type { IIssueLink, linkDetails, ModuleLink } from "types";
+import type { IIssueLink, ILinkDetails, ModuleLink } from "types";
 
 type Props = {
   isOpen: boolean;
   handleClose: () => void;
-  data?: linkDetails | null;
+  data?: ILinkDetails | null;
   status: boolean;
-  createIssueLink: (formData: IIssueLink | ModuleLink) => Promise<void>;
-  updateIssueLink: (formData: IIssueLink | ModuleLink, linkId: string) => Promise<void>;
+  createIssueLink: (formData: IIssueLink | ModuleLink) => Promise<ILinkDetails> | Promise<void> | void;
+  updateIssueLink: (formData: IIssueLink | ModuleLink, linkId: string) => Promise<ILinkDetails> | Promise<void> | void;
 };
 
 const defaultValues: IIssueLink | ModuleLink = {
@@ -31,7 +31,7 @@ export const LinkModal: FC<Props> = (props) => {
     handleSubmit,
     control,
     reset,
-  } = useForm<ModuleLink>({
+  } = useForm<IIssueLink | ModuleLink>({
     defaultValues,
   });
 
@@ -99,7 +99,7 @@ export const LinkModal: FC<Props> = (props) => {
                       </Dialog.Title>
                       <div className="mt-2 space-y-3">
                         <div>
-                          <label htmlFor="url" className="text-custom-text-200 mb-2">
+                          <label htmlFor="url" className="mb-2 text-custom-text-200">
                             URL
                           </label>
                           <Controller
@@ -118,13 +118,14 @@ export const LinkModal: FC<Props> = (props) => {
                                 ref={ref}
                                 hasError={Boolean(errors.url)}
                                 placeholder="https://..."
+                                pattern="^(https?://).*"
                                 className="w-full"
                               />
                             )}
                           />
                         </div>
                         <div>
-                          <label htmlFor="title" className="text-custom-text-200 mb-2">
+                          <label htmlFor="title" className="mb-2 text-custom-text-200">
                             {`Title (optional)`}
                           </label>
                           <Controller

@@ -26,6 +26,8 @@ class UserSerializer(BaseSerializer):
             "token_updated_at",
             "is_onboarded",
             "is_bot",
+            "is_password_autoset",
+            "is_email_verified",
         ]
         extra_kwargs = {"password": {"write_only": True}}
 
@@ -60,6 +62,8 @@ class UserMeSerializer(BaseSerializer):
             "theme",
             "last_workspace_id",
             "use_case",
+            "is_password_autoset",
+            "is_email_verified",
         ]
         read_only_fields = fields
 
@@ -80,9 +84,18 @@ class UserMeSettingsSerializer(BaseSerializer):
         workspace_invites = WorkspaceMemberInvite.objects.filter(
             email=obj.email
         ).count()
-        if obj.last_workspace_id is not None:
+        if (
+            obj.last_workspace_id is not None
+            and Workspace.objects.filter(
+                pk=obj.last_workspace_id,
+                workspace_member__member=obj.id,
+                workspace_member__is_active=True,
+            ).exists()
+        ):
             workspace = Workspace.objects.filter(
-                pk=obj.last_workspace_id, workspace_member__member=obj.id
+                pk=obj.last_workspace_id,
+                workspace_member__member=obj.id,
+                workspace_member__is_active=True,
             ).first()
             return {
                 "last_workspace_id": obj.last_workspace_id,
@@ -95,7 +108,9 @@ class UserMeSettingsSerializer(BaseSerializer):
             }
         else:
             fallback_workspace = (
-                Workspace.objects.filter(workspace_member__member_id=obj.id)
+                Workspace.objects.filter(
+                    workspace_member__member_id=obj.id, workspace_member__is_active=True
+                )
                 .order_by("created_at")
                 .first()
             )
@@ -154,24 +169,25 @@ class ChangePasswordSerializer(serializers.Serializer):
     Serializer for password change endpoint.
     """
     old_password = serializers.CharField(required=True)
-    new_password = serializers.CharField(required=True)
-    confirm_password = serializers.CharField(required=True)
+    new_password = serializers.CharField(required=True, min_length=8)
+    confirm_password = serializers.CharField(required=True, min_length=8)
 
     def validate(self, data):
         if data.get("old_password") == data.get("new_password"):
-            raise serializers.ValidationError({"error": "New password cannot be same as old password."})
+            raise serializers.ValidationError(
+                {"error": "New password cannot be same as old password."}
+            )
 
         if data.get("new_password") != data.get("confirm_password"):
-            raise serializers.ValidationError({"error": "Confirm password should be same as the new password."})
+            raise serializers.ValidationError(
+                {"error": "Confirm password should be same as the new password."}
+            )
 
         return data
 
 
 class ResetPasswordSerializer(serializers.Serializer):
-    model = User
-
     """
     Serializer for password change endpoint.
     """
-    new_password = serializers.CharField(required=True)
-    confirm_password = serializers.CharField(required=True)
+    new_password = serializers.CharField(required=True, min_length=8)

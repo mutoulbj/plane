@@ -15,6 +15,7 @@ import { STATES_LIST } from "constants/fetch-keys";
 
 type Props = {
   value: string;
+  projectId: string;
   onChange: (val: string) => void;
   disabled?: boolean;
 };
@@ -22,9 +23,9 @@ type Props = {
 // services
 const stateService = new ProjectStateService();
 
-export const SidebarStateSelect: React.FC<Props> = ({ value, onChange, disabled = false }) => {
+export const SidebarStateSelect: React.FC<Props> = ({ value, projectId, onChange, disabled = false }) => {
   const router = useRouter();
-  const { workspaceSlug, projectId, inboxIssueId } = router.query;
+  const { workspaceSlug, inboxIssueId } = router.query;
 
   const { data: states } = useSWR(
     workspaceSlug && projectId ? STATES_LIST(projectId as string) : null,
@@ -50,7 +51,7 @@ export const SidebarStateSelect: React.FC<Props> = ({ value, onChange, disabled 
       onChange={onChange}
       options={options}
       customButton={
-        <div className="bg-custom-background-80 text-xs rounded px-2.5 py-0.5 max-w-[10rem] truncate">
+        <div className="max-w-[10rem] truncate rounded bg-custom-background-80 px-2.5 py-0.5 text-xs">
           {selectedOption ? (
             <div className="flex items-center gap-1.5 text-left text-custom-text-100">
               <StateGroupIcon stateGroup={selectedOption.group} color={selectedOption.color} />

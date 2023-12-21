@@ -233,7 +233,7 @@ export class CycleStore implements ICycleStore {
 
       const _activeCycleIssues = {
         ...this.active_cycle_issues,
-        [cycleId]: _cycleIssues as IIssue[],
+        [cycleId]: Object.values(_cycleIssues) as IIssue[],
       };
 
       runInAction(() => {
@@ -295,6 +295,19 @@ export class CycleStore implements ICycleStore {
       const _response = await this.cycleService.deleteCycle(workspaceSlug, projectId, cycleId);
 
       const _currentView = this.cycleView === "active" ? "current" : this.cycleView;
+
+      runInAction(() => {
+        ["all", "current", "completed", "upcoming", "draft"].forEach((view) => {
+          this.cycles = {
+            ...this.cycles,
+            [projectId]: {
+              ...this.cycles[projectId],
+              [view]: this.cycles[projectId][view]?.filter((c) => c.id !== cycleId),
+            },
+          };
+        });
+      });
+
       this.fetchCycles(workspaceSlug, projectId, _currentView);
 
       return _response;

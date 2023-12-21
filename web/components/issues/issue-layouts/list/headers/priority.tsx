@@ -4,6 +4,7 @@ import { AlertCircle, SignalHigh, SignalMedium, SignalLow, Ban } from "lucide-re
 // components
 import { HeaderGroupByCard } from "./group-by-card";
 import { EProjectStore } from "store/command-palette.store";
+import { IIssue } from "types";
 
 export interface IPriorityHeader {
   column_id: string;
@@ -11,28 +12,29 @@ export interface IPriorityHeader {
   issues_count: number;
   disableIssueCreation?: boolean;
   currentStore: EProjectStore;
+  addIssuesToView?: (issueIds: string[]) => Promise<IIssue>;
 }
 
 const Icon = ({ priority }: any) => (
-  <div className="w-full h-full">
+  <div className="h-full w-full">
     {priority === "urgent" ? (
-      <div className="border border-red-500 bg-red-500 text-white w-full h-full overflow-hidden flex justify-center items-center rounded-sm">
+      <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-sm border border-red-500 bg-red-500 text-white">
         <AlertCircle size={14} strokeWidth={2} />
       </div>
     ) : priority === "high" ? (
-      <div className="border border-red-500/20 bg-red-500/10 text-red-500 w-full h-full overflow-hidden flex justify-center items-center rounded-sm">
+      <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-sm border border-red-500/20 bg-red-500/10 text-red-500">
         <SignalHigh size={14} strokeWidth={2} className="pl-[3px]" />
       </div>
     ) : priority === "medium" ? (
-      <div className="border border-orange-500/20 bg-orange-500/10 text-orange-500 w-full h-full overflow-hidden flex justify-center items-center rounded-sm">
+      <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-sm border border-orange-500/20 bg-orange-500/10 text-orange-500">
         <SignalMedium size={14} strokeWidth={2} className="pl-[3px]" />
       </div>
     ) : priority === "low" ? (
-      <div className="border border-green-500/20 bg-green-500/10 text-green-500 w-full h-full overflow-hidden flex justify-center items-center rounded-sm">
+      <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-sm border border-green-500/20 bg-green-500/10 text-green-500">
         <SignalLow size={14} strokeWidth={2} className="pl-[3px]" />
       </div>
     ) : (
-      <div className="border border-custom-border-400/20 bg-custom-text-400/10 text-custom-text-400 w-full h-full overflow-hidden flex justify-center items-center rounded-sm">
+      <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-sm border border-custom-border-400/20 bg-custom-text-400/10 text-custom-text-400">
         <Ban size={14} strokeWidth={2} />
       </div>
     )}
@@ -40,7 +42,7 @@ const Icon = ({ priority }: any) => (
 );
 
 export const PriorityHeader: FC<IPriorityHeader> = observer((props) => {
-  const { column_id, column_value, issues_count, disableIssueCreation, currentStore } = props;
+  const { column_value, issues_count, disableIssueCreation, currentStore, addIssuesToView } = props;
 
   const priority = column_value ?? null;
 
@@ -54,6 +56,7 @@ export const PriorityHeader: FC<IPriorityHeader> = observer((props) => {
           issuePayload={{ priority: priority?.key }}
           disableIssueCreation={disableIssueCreation}
           currentStore={currentStore}
+          addIssuesToView={addIssuesToView}
         />
       )}
     </>

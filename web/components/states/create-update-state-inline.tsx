@@ -44,7 +44,10 @@ export const CreateUpdateStateInline: React.FC<Props> = observer((props) => {
   const { workspaceSlug, projectId } = router.query;
 
   // store
-  const { projectState: projectStateStore, trackEvent: { postHogEventTracker, setTrackElement } } = useMobxStore();
+  const {
+    projectState: projectStateStore,
+    trackEvent: { postHogEventTracker, setTrackElement },
+  } = useMobxStore();
 
   // hooks
   const { setToastAlert } = useToast();
@@ -95,13 +98,10 @@ export const CreateUpdateStateInline: React.FC<Props> = observer((props) => {
           title: "Success!",
           message: "State created successfully.",
         });
-        postHogEventTracker(
-          'STATE_CREATE',
-          {
-            ...res,
-            state: "SUCCESS"
-          }
-        );
+        postHogEventTracker("STATE_CREATE", {
+          ...res,
+          state: "SUCCESS",
+        });
       })
       .catch((error) => {
         if (error.status === 400)
@@ -116,12 +116,9 @@ export const CreateUpdateStateInline: React.FC<Props> = observer((props) => {
             title: "Error!",
             message: "State could not be created. Please try again.",
           });
-        postHogEventTracker(
-          'STATE_CREATE',
-          {
-            state: "FAILED"
-          }
-        );
+        postHogEventTracker("STATE_CREATE", {
+          state: "FAILED",
+        });
       });
   };
 
@@ -133,13 +130,10 @@ export const CreateUpdateStateInline: React.FC<Props> = observer((props) => {
       .then((res) => {
         mutate(STATES_LIST(projectId.toString()));
         handleClose();
-        postHogEventTracker(
-          'STATE_UPDATE',
-          {
-            ...res,
-            state: "SUCCESS",
-          }
-        );
+        postHogEventTracker("STATE_UPDATE", {
+          ...res,
+          state: "SUCCESS",
+        });
         setToastAlert({
           type: "success",
           title: "Success!",
@@ -159,12 +153,9 @@ export const CreateUpdateStateInline: React.FC<Props> = observer((props) => {
             title: "Error!",
             message: "State could not be updated. Please try again.",
           });
-        postHogEventTracker(
-          'STATE_UPDATE',
-          {
-            state: "FAILED",
-          }
-        );
+        postHogEventTracker("STATE_UPDATE", {
+          state: "FAILED",
+        });
       });
   };
 
@@ -209,7 +200,7 @@ export const CreateUpdateStateInline: React.FC<Props> = observer((props) => {
                 leaveFrom="opacity-100 translate-y-0"
                 leaveTo="opacity-0 translate-y-1"
               >
-                <Popover.Panel className="absolute top-full left-0 z-20 mt-3 w-screen max-w-xs px-2 sm:px-0">
+                <Popover.Panel className="absolute left-0 top-full z-20 mt-3 w-screen max-w-xs px-2 sm:px-0">
                   <Controller
                     name="color"
                     control={control}
@@ -292,10 +283,14 @@ export const CreateUpdateStateInline: React.FC<Props> = observer((props) => {
       <Button variant="neutral-primary" onClick={handleClose}>
         Cancel
       </Button>
-      <Button variant="primary" type="submit" loading={isSubmitting} onClick={() => {
-        setTrackElement("PROJECT_SETTINGS_STATE_PAGE");
-      }
-      }>
+      <Button
+        variant="primary"
+        type="submit"
+        loading={isSubmitting}
+        onClick={() => {
+          setTrackElement("PROJECT_SETTINGS_STATE_PAGE");
+        }}
+      >
         {isSubmitting ? (data ? "Updating..." : "Creating...") : data ? "Update" : "Create"}
       </Button>
     </form>

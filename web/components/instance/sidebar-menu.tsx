@@ -48,13 +48,13 @@ export const InstanceAdminSidebarMenu = () => {
   const router = useRouter();
 
   return (
-    <div className="flex flex-col gap-2.5 py-6 px-4 h-full w-full overflow-y-auto">
+    <div className="flex h-full w-full flex-col gap-2.5 overflow-y-auto px-4 py-6">
       {INSTANCE_ADMIN_LINKS.map((item, index) => {
         const isActive = item.name === "Settings" ? router.asPath.includes(item.href) : router.asPath === item.href;
 
         return (
           <Link key={index} href={item.href}>
-            <a className="block w-full">
+            <div>
               <Tooltip tooltipContent={item.name} position="right" className="ml-2" disabled={!sidebarCollapsed}>
                 <div
                   className={`group flex w-full items-center gap-3 rounded-md px-3 py-2 outline-none ${
@@ -84,7 +84,7 @@ export const InstanceAdminSidebarMenu = () => {
                   )}
                 </div>
               </Tooltip>
-            </a>
+            </div>
           </Link>
         );
       })}

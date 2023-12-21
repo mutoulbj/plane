@@ -65,7 +65,8 @@ export class ProjectIssuesStore extends IssueBaseStore implements IProjectIssues
     autorun(() => {
       const workspaceSlug = this.rootStore.workspace.workspaceSlug;
       const projectId = this.rootStore.project.projectId;
-      if (!workspaceSlug || !projectId) return;
+      const hasPermissionToCurrentProject = this.rootStore.user.hasPermissionToCurrentProject;
+      if (!workspaceSlug || !projectId || !hasPermissionToCurrentProject) return;
 
       const userFilters = this.rootStore?.projectIssuesFilter?.issueFilters?.filters;
       if (userFilters) this.fetchIssues(workspaceSlug, projectId, "mutation");
@@ -94,24 +95,15 @@ export class ProjectIssuesStore extends IssueBaseStore implements IProjectIssues
     let issues: IIssueResponse | IGroupedIssues | ISubGroupedIssues | TUnGroupedIssues | undefined = undefined;
 
     if (layout === "list" && orderBy) {
-      console.log("list");
       if (groupBy) issues = this.groupedIssues(groupBy, orderBy, this.issues[projectId]);
       else issues = this.unGroupedIssues(orderBy, this.issues[projectId]);
     } else if (layout === "kanban" && groupBy && orderBy) {
-      console.log("kanban");
       if (subGroupBy) issues = this.subGroupedIssues(subGroupBy, groupBy, orderBy, this.issues[projectId]);
       else issues = this.groupedIssues(groupBy, orderBy, this.issues[projectId]);
-      console.log("issues", issues);
-    } else if (layout === "calendar") {
-      console.log("calendar");
+    } else if (layout === "calendar")
       issues = this.groupedIssues("target_date" as TIssueGroupByOptions, "target_date", this.issues[projectId], true);
-    } else if (layout === "spreadsheet") {
-      console.log("spreadsheet");
-      issues = this.unGroupedIssues(orderBy ?? "-created_at", this.issues[projectId]);
-    } else if (layout === "gantt_chart") {
-      console.log("gantt_chart");
-      issues = this.unGroupedIssues(orderBy ?? "sort_order", this.issues[projectId]);
-    }
+    else if (layout === "spreadsheet") issues = this.unGroupedIssues(orderBy ?? "-created_at", this.issues[projectId]);
+    else if (layout === "gantt_chart") issues = this.unGroupedIssues(orderBy ?? "sort_order", this.issues[projectId]);
 
     return issues;
   }
@@ -121,7 +113,7 @@ export class ProjectIssuesStore extends IssueBaseStore implements IProjectIssues
       this.loader = loadType;
 
       const params = this.rootStore?.projectIssuesFilter?.appliedFilters;
-      const response = await this.issueService.getV3Issues(workspaceSlug, projectId, params);
+      const response = await this.issueService.getIssues(workspaceSlug, projectId, params);
 
       const _issues = { ...this.issues, [projectId]: { ...response } };
 
@@ -171,6 +163,12 @@ export class ProjectIssuesStore extends IssueBaseStore implements IProjectIssues
 
       const response = await this.issueService.patchIssue(workspaceSlug, projectId, issueId, data);
 
+      runInAction(() => {
+        _issues = { ...this.issues };
+        _issues[projectId][issueId] = { ..._issues[projectId][issueId], ...response };
+        this.issues = _issues;
+      });
+
       return response;
     } catch (error) {
       this.fetchIssues(workspaceSlug, projectId, "mutation");
@@ -184,6 +182,7 @@ export class ProjectIssuesStore extends IssueBaseStore implements IProjectIssues
       if (!_issues) _issues = {};
       if (!_issues[projectId]) _issues[projectId] = {};
       delete _issues?.[projectId]?.[issueId];
+      _issues[projectId] = { ..._issues[projectId] };
 
       runInAction(() => {
         this.issues = _issues;

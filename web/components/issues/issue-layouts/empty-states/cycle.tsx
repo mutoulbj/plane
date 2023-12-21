@@ -15,6 +15,8 @@ import emptyIssue from "public/empty-state/issue.svg";
 // types
 import { ISearchIssueResponse } from "types";
 import { EProjectStore } from "store/command-palette.store";
+// constants
+import { EUserWorkspaceRoles } from "constants/workspace";
 
 type Props = {
   workspaceSlug: string | undefined;
@@ -28,9 +30,10 @@ export const CycleEmptyState: React.FC<Props> = observer((props) => {
   const [cycleIssuesListModal, setCycleIssuesListModal] = useState(false);
 
   const {
-    cycleIssue: cycleIssueStore,
+    cycleIssues: cycleIssueStore,
     commandPalette: commandPaletteStore,
     trackEvent: { setTrackElement },
+    user: { currentProjectRole: userRole },
   } = useMobxStore();
 
   const { setToastAlert } = useToast();
@@ -40,16 +43,16 @@ export const CycleEmptyState: React.FC<Props> = observer((props) => {
 
     const issueIds = data.map((i) => i.id);
 
-    await cycleIssueStore
-      .addIssueToCycle(workspaceSlug.toString(), projectId.toString(), cycleId.toString(), issueIds)
-      .catch(() => {
-        setToastAlert({
-          type: "error",
-          title: "Error!",
-          message: "Selected issues could not be added to the cycle. Please try again.",
-        });
+    await cycleIssueStore.addIssueToCycle(workspaceSlug.toString(), cycleId.toString(), issueIds).catch(() => {
+      setToastAlert({
+        type: "error",
+        title: "Error!",
+        message: "Selected issues could not be added to the cycle. Please try again.",
       });
+    });
   };
+
+  const isEditingAllowed = !!userRole && userRole >= EUserWorkspaceRoles.MEMBER;
 
   return (
     <>
@@ -59,7 +62,7 @@ export const CycleEmptyState: React.FC<Props> = observer((props) => {
         searchParams={{ cycle: true }}
         handleOnSubmit={handleAddIssuesToCycle}
       />
-      <div className="h-full w-full grid place-items-center">
+      <div className="grid h-full w-full place-items-center">
         <EmptyState
           title="Cycle issues will appear here"
           description="Issues help you track individual pieces of work. With Issues, keep track of what's going on, who is working on it, and what's done."
@@ -77,10 +80,12 @@ export const CycleEmptyState: React.FC<Props> = observer((props) => {
               variant="neutral-primary"
               prependIcon={<PlusIcon className="h-3 w-3" strokeWidth={2} />}
               onClick={() => setCycleIssuesListModal(true)}
+              disabled={!isEditingAllowed}
             >
               Add an existing issue
             </Button>
           }
+          disabled={!isEditingAllowed}
         />
       </div>
     </>

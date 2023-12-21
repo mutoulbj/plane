@@ -20,11 +20,7 @@ import { Spinner } from "@plane/ui";
 
 export const ModuleLayoutRoot: React.FC = observer(() => {
   const router = useRouter();
-  const { workspaceSlug, projectId, moduleId } = router.query as {
-    workspaceSlug: string;
-    projectId: string;
-    moduleId: string;
-  };
+  const { workspaceSlug, projectId, moduleId } = router.query;
 
   const {
     moduleIssues: { loader, getIssues, fetchIssues },
@@ -35,8 +31,13 @@ export const ModuleLayoutRoot: React.FC = observer(() => {
     workspaceSlug && projectId && moduleId ? `MODULE_ISSUES_V3_${workspaceSlug}_${projectId}_${moduleId}` : null,
     async () => {
       if (workspaceSlug && projectId && moduleId) {
-        await fetchFilters(workspaceSlug, projectId, moduleId);
-        await fetchIssues(workspaceSlug, projectId, getIssues ? "mutation" : "init-loader", moduleId);
+        await fetchFilters(workspaceSlug.toString(), projectId.toString(), moduleId.toString());
+        await fetchIssues(
+          workspaceSlug.toString(),
+          projectId.toString(),
+          getIssues ? "mutation" : "init-loader",
+          moduleId.toString()
+        );
       }
     }
   );
@@ -44,29 +45,37 @@ export const ModuleLayoutRoot: React.FC = observer(() => {
   const activeLayout = issueFilters?.displayFilters?.layout || undefined;
 
   return (
-    <div className="relative w-full h-full flex flex-col overflow-hidden">
+    <div className="relative flex h-full w-full flex-col overflow-hidden">
       <ModuleAppliedFiltersRoot />
 
-      {loader === "init-loader" ? (
-        <div className="w-full h-full flex justify-center items-center">
+      {loader === "init-loader" || !getIssues ? (
+        <div className="flex h-full w-full items-center justify-center">
           <Spinner />
         </div>
       ) : (
         <>
+          {Object.keys(getIssues ?? {}).length == 0 ? (
+            <ModuleEmptyState
+              workspaceSlug={workspaceSlug?.toString()}
+              projectId={projectId?.toString()}
+              moduleId={moduleId?.toString()}
+            />
+          ) : (
+            <div className="h-full w-full overflow-auto">
+              {activeLayout === "list" ? (
+                <ModuleListLayout />
+              ) : activeLayout === "kanban" ? (
+                <ModuleKanBanLayout />
+              ) : activeLayout === "calendar" ? (
+                <ModuleCalendarLayout />
+              ) : activeLayout === "gantt_chart" ? (
+                <ModuleGanttLayout />
+              ) : activeLayout === "spreadsheet" ? (
+                <ModuleSpreadsheetLayout />
+              ) : null}
+            </div>
+          )}
           {/* <ModuleEmptyState workspaceSlug={workspaceSlug} projectId={projectId} moduleId={moduleId} /> */}
-          <div className="h-full w-full overflow-auto">
-            {activeLayout === "list" ? (
-              <ModuleListLayout />
-            ) : activeLayout === "kanban" ? (
-              <ModuleKanBanLayout />
-            ) : activeLayout === "calendar" ? (
-              <ModuleCalendarLayout />
-            ) : activeLayout === "gantt_chart" ? (
-              <ModuleGanttLayout />
-            ) : activeLayout === "spreadsheet" ? (
-              <ModuleSpreadsheetLayout />
-            ) : null}
-          </div>
         </>
       )}
     </div>

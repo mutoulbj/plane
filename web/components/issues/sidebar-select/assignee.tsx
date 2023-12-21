@@ -10,6 +10,7 @@ import { PROJECT_MEMBERS } from "constants/fetch-keys";
 
 type Props = {
   value: string[];
+  projectId: string;
   onChange: (val: string[]) => void;
   disabled?: boolean;
 };
@@ -17,9 +18,9 @@ type Props = {
 // services
 const projectMemberService = new ProjectMemberService();
 
-export const SidebarAssigneeSelect: React.FC<Props> = ({ value, onChange, disabled = false }) => {
+export const SidebarAssigneeSelect: React.FC<Props> = ({ value, projectId, onChange, disabled = false }) => {
   const router = useRouter();
-  const { workspaceSlug, projectId } = router.query;
+  const { workspaceSlug } = router.query;
 
   const { data: members } = useSWR(
     workspaceSlug && projectId ? PROJECT_MEMBERS(projectId as string) : null,
@@ -55,12 +56,14 @@ export const SidebarAssigneeSelect: React.FC<Props> = ({ value, onChange, disabl
                   return <Avatar key={member.id} name={member.display_name} src={member.avatar} />;
                 })}
               </AvatarGroup>
-              <span className="text-custom-text-100 text-xs">{value.length} Assignees</span>
+              <span className="text-xs text-custom-text-100">{value.length} Assignees</span>
             </div>
           ) : (
             <button
               type="button"
-              className="bg-custom-background-80 px-2.5 py-0.5 text-xs rounded text-custom-text-200"
+              className={`rounded bg-custom-background-80 px-2.5 py-0.5 text-xs text-custom-text-200 ${
+                disabled ? "cursor-not-allowed" : ""
+              }`}
             >
               No assignees
             </button>

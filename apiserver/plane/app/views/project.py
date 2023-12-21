@@ -39,8 +39,10 @@ from plane.app.serializers import (
 )
 
 from plane.app.permissions import (
+    WorkspaceUserPermission,
     ProjectBasePermission,
     ProjectMemberPermission,
+    ProjectLitePermission,
 )
 
 from plane.db.models import (
@@ -143,6 +145,16 @@ class ProjectViewSet(WebhookMixin, BaseViewSet):
                     )
                 )
             )
+            .prefetch_related(
+                Prefetch(
+                    "project_projectmember",
+                    queryset=ProjectMember.objects.filter(
+                        workspace__slug=self.kwargs.get("slug"),
+                        is_active=True,
+                    ).select_related("member"),
+                    to_attr="members_list",
+                )
+            )
             .distinct()
         )
 
@@ -158,15 +170,6 @@ class ProjectViewSet(WebhookMixin, BaseViewSet):
         projects = (
             self.get_queryset()
             .annotate(sort_order=Subquery(sort_order_query))
-            .prefetch_related(
-                Prefetch(
-                    "project_projectmember",
-                    queryset=ProjectMember.objects.filter(
-                        workspace__slug=slug,
-                        is_active=True,
-                    ).select_related("member"),
-                )
-            )
             .order_by("sort_order", "name")
         )
         if request.GET.get("per_page", False) and request.GET.get("cursor", False):
@@ -600,6 +603,18 @@ class ProjectMemberViewSet(BaseViewSet):
         ProjectMemberPermission,
     ]
 
+    def get_permissions(self):
+        if self.action == "leave":
+            self.permission_classes = [
+                ProjectLitePermission,
+            ]
+        else:
+            self.permission_classes = [
+                ProjectMemberPermission,
+            ]
+
+        return super(ProjectMemberViewSet, self).get_permissions()
+
     search_fields = [
         "member__display_name",
         "member__first_name",
@@ -663,6 +678,25 @@ class ProjectMemberViewSet(BaseViewSet):
                     workspace_id=project.workspace_id,
                 )
             )
+
+            # Check if the user is already a member of the project and is inactive
+            if ProjectMember.objects.filter(
+                workspace__slug=slug,
+                project_id=project_id,
+                member_id=member.get("member_id"),
+                is_active=False,
+            ).exists():
+                member_detail = ProjectMember.objects.get(
+                    workspace__slug=slug,
+                    project_id=project_id,
+                    member_id=member.get("member_id"),
+                    is_active=False,
+                )
+                # Check if the user has not deactivated the account
+                user = User.objects.filter(pk=member.get("member_id")).first()
+                if user.is_active:
+                    member_detail.is_active = True
+                    member_detail.save(update_fields=["is_active"])
 
         project_members = ProjectMember.objects.bulk_create(
             bulk_project_members,
@@ -976,11 +1010,18 @@ class ProjectPublicCoverImagesEndpoint(BaseAPIView):
 
     def get(self, request):
         files = []
-        s3 = boto3.client(
-            "s3",
-            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-        )
+        s3_client_params = {
+            "service_name": "s3",
+            "aws_access_key_id": settings.AWS_ACCESS_KEY_ID,
+            "aws_secret_access_key": settings.AWS_SECRET_ACCESS_KEY,
+        }
+
+        # Use AWS_S3_ENDPOINT_URL if it is present in the settings
+        if hasattr(settings, "AWS_S3_ENDPOINT_URL") and settings.AWS_S3_ENDPOINT_URL:
+            s3_client_params["endpoint_url"] = settings.AWS_S3_ENDPOINT_URL
+
+        s3 = boto3.client(**s3_client_params)
+
         params = {
             "Bucket": settings.AWS_STORAGE_BUCKET_NAME,
             "Prefix": "static/project-cover/",
@@ -993,9 +1034,19 @@ class ProjectPublicCoverImagesEndpoint(BaseAPIView):
                 if not content["Key"].endswith(
                     "/"
                 ):  # This line ensures we're only getting files, not "sub-folders"
-                    files.append(
-                        f"https://{settings.AWS_STORAGE_BUCKET_NAME}.s3.{settings.AWS_REGION}.amazonaws.com/{content['Key']}"
-                    )
+                    if (
+                        hasattr(settings, "AWS_S3_CUSTOM_DOMAIN")
+                        and settings.AWS_S3_CUSTOM_DOMAIN
+                        and hasattr(settings, "AWS_S3_URL_PROTOCOL")
+                        and settings.AWS_S3_URL_PROTOCOL
+                    ):
+                        files.append(
+                            f"{settings.AWS_S3_URL_PROTOCOL}//{settings.AWS_S3_CUSTOM_DOMAIN}/{content['Key']}"
+                        )
+                    else:
+                        files.append(
+                            f"https://{settings.AWS_STORAGE_BUCKET_NAME}.s3.{settings.AWS_REGION}.amazonaws.com/{content['Key']}"
+                        )
 
         return Response(files, status=status.HTTP_200_OK)
 
@@ -1048,3 +1099,20 @@ class ProjectDeployBoardViewSet(BaseViewSet):
 
         serializer = ProjectDeployBoardSerializer(project_deploy_board)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class UserProjectRolesEndpoint(BaseAPIView):
+    permission_classes = [
+        WorkspaceUserPermission,
+    ]
+
+    def get(self, request, slug):
+        project_members = ProjectMember.objects.filter(
+            workspace__slug=slug,
+            member_id=request.user.id,
+        ).values("project_id", "role")
+
+        project_members = {
+            str(member["project_id"]): member["role"] for member in project_members
+        }
+        return Response(project_members, status=status.HTTP_200_OK)

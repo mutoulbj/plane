@@ -1,6 +1,5 @@
 import { ReactElement } from "react";
 import useSWR from "swr";
-import { useRouter } from "next/router";
 import Link from "next/link";
 // services
 import { UserService } from "services/user.service";
@@ -9,7 +8,6 @@ import { ProfileSettingsLayout } from "layouts/settings-layout";
 // components
 import { ActivityIcon, ActivityMessage } from "components/core";
 import { RichReadOnlyEditor } from "@plane/rich-text-editor";
-import { ProfileSettingsHeader } from "components/headers";
 // icons
 import { History, MessageSquare } from "lucide-react";
 // ui
@@ -24,18 +22,15 @@ import { NextPageWithLayout } from "types/app";
 const userService = new UserService();
 
 const ProfileActivityPage: NextPageWithLayout = () => {
-  const router = useRouter();
-  const { workspaceSlug } = router.query;
-
   const { data: userActivity } = useSWR(USER_ACTIVITY, () => userService.getUserActivity());
 
   return (
-    <section className="pr-9 py-8 w-full overflow-y-auto">
-      <div className="flex items-center py-3.5 border-b border-custom-border-100">
+    <section className="mx-auto pt-16 flex h-full w-full flex-col overflow-hidden px-8 pb-8 lg:w-3/5">
+      <div className="flex items-center border-b border-custom-border-100 pb-3.5">
         <h3 className="text-xl font-medium">Activity</h3>
       </div>
       {userActivity ? (
-        <div className="flex flex-col gap-2 pb-4 w-full">
+        <div className="flex h-full w-full flex-col gap-2 overflow-y-auto">
           <ul role="list" className="-mb-4">
             {userActivity.results.map((activityItem: any) => {
               if (activityItem.field === "comment") {
@@ -101,10 +96,12 @@ const ProfileActivityPage: NextPageWithLayout = () => {
                 activityItem.field !== "estimate" ? (
                   <span className="text-custom-text-200">
                     created{" "}
-                    <Link href={`/${workspaceSlug}/projects/${activityItem.project}/issues/${activityItem.issue}`}>
-                      <a className="inline-flex items-center hover:underline">
+                    <Link
+                      href={`/${activityItem.workspace_detail.slug}/projects/${activityItem.project}/issues/${activityItem.issue}`}
+                    >
+                      <span className="inline-flex items-center hover:underline">
                         this issue. <ExternalLinkIcon className="ml-1 h-3.5 w-3.5" />
-                      </a>
+                      </span>
                     </Link>
                   </span>
                 ) : activityItem.field ? (
@@ -135,7 +132,7 @@ const ProfileActivityPage: NextPageWithLayout = () => {
                                       alt={activityItem.actor_detail.display_name}
                                       height={24}
                                       width={24}
-                                      className="rounded-full h-full w-full object-cover"
+                                      className="h-full w-full rounded-full object-cover"
                                     />
                                   ) : (
                                     <div
@@ -148,8 +145,8 @@ const ProfileActivityPage: NextPageWithLayout = () => {
                               </div>
                             </div>
                           </div>
-                          <div className="min-w-0 flex-1 py-4 border-b border-custom-border-100">
-                            <div className="text-sm text-custom-text-200 break-words flex gap-1">
+                          <div className="min-w-0 flex-1 border-b border-custom-border-100 py-4">
+                            <div className="flex gap-1 break-words text-sm text-custom-text-200">
                               {activityItem.field === "archived_at" && activityItem.new_value !== "restore" ? (
                                 <span className="text-gray font-medium">Plane</span>
                               ) : activityItem.actor_detail.is_bot ? (
@@ -157,13 +154,17 @@ const ProfileActivityPage: NextPageWithLayout = () => {
                                   {activityItem.actor_detail.first_name} Bot
                                 </span>
                               ) : (
-                                <Link href={`/${workspaceSlug}/profile/${activityItem.actor_detail.id}`}>
-                                  <a className="text-gray font-medium">{activityItem.actor_detail.display_name}</a>
+                                <Link
+                                  href={`/${activityItem.workspace_detail.slug}/profile/${activityItem.actor_detail.id}`}
+                                >
+                                  <span className="text-gray font-medium">
+                                    {activityItem.actor_detail.display_name}
+                                  </span>
                                 </Link>
                               )}{" "}
                               <div className="flex gap-1 truncate">
                                 {message}{" "}
-                                <span className="whitespace-nowrap flex-shrink-0">
+                                <span className="flex-shrink-0 whitespace-nowrap">
                                   {timeAgo(activityItem.created_at)}
                                 </span>
                               </div>
@@ -179,7 +180,7 @@ const ProfileActivityPage: NextPageWithLayout = () => {
           </ul>
         </div>
       ) : (
-        <Loader className="space-y-5">
+        <Loader className="space-y-5 mt-5">
           <Loader.Item height="40px" />
           <Loader.Item height="40px" />
           <Loader.Item height="40px" />
@@ -191,7 +192,7 @@ const ProfileActivityPage: NextPageWithLayout = () => {
 };
 
 ProfileActivityPage.getLayout = function getLayout(page: ReactElement) {
-  return <ProfileSettingsLayout header={<ProfileSettingsHeader title="Activity" />}>{page}</ProfileSettingsLayout>;
+  return <ProfileSettingsLayout>{page}</ProfileSettingsLayout>;
 };
 
 export default ProfileActivityPage;

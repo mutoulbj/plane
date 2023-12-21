@@ -1,11 +1,10 @@
-import React from "react";
+import React, { useCallback } from "react";
 import { useRouter } from "next/router";
 import { observer } from "mobx-react-lite";
-// hooks
+// mobx store
 import { useMobxStore } from "lib/mobx/store-provider";
-import useProjectDetails from "hooks/use-project-details";
 // components
-import { IssueGanttBlock } from "components/issues";
+import { IssueGanttBlock, IssuePeekOverview } from "components/issues";
 import {
   GanttChartRoot,
   IBlockUpdateData,
@@ -25,8 +24,10 @@ import {
   IViewIssuesFilterStore,
   IViewIssuesStore,
 } from "store/issues";
-import { EUserWorkspaceRoles } from "layouts/settings-layout/workspace/sidebar";
 import { TUnGroupedIssues } from "store/issues/types";
+import { EIssueActions } from "../types";
+// constants
+import { EUserWorkspaceRoles } from "constants/workspace";
 
 interface IBaseGanttRoot {
   issueFiltersStore:
@@ -36,57 +37,68 @@ interface IBaseGanttRoot {
     | IViewIssuesFilterStore;
   issueStore: IProjectIssuesStore | IModuleIssuesStore | ICycleIssuesStore | IViewIssuesStore;
   viewId?: string;
+  issueActions: {
+    [EIssueActions.DELETE]: (issue: IIssue) => Promise<void>;
+    [EIssueActions.UPDATE]?: (issue: IIssue) => Promise<void>;
+    [EIssueActions.REMOVE]?: (issue: IIssue) => Promise<void>;
+  };
 }
 
 export const BaseGanttRoot: React.FC<IBaseGanttRoot> = observer((props: IBaseGanttRoot) => {
-  const { issueFiltersStore, issueStore, viewId } = props;
+  const { issueFiltersStore, issueStore, viewId, issueActions } = props;
 
   const router = useRouter();
-  const { workspaceSlug } = router.query as { workspaceSlug: string; projectId: string };
+  const { workspaceSlug, peekIssueId, peekProjectId } = router.query;
 
-  const { projectDetails } = useProjectDetails();
+  const {
+    user: { currentProjectRole },
+  } = useMobxStore();
 
   const appliedDisplayFilters = issueFiltersStore.issueFilters?.displayFilters;
 
   const issuesResponse = issueStore.getIssues;
   const issueIds = (issueStore.getIssuesIds ?? []) as TUnGroupedIssues;
+  const { enableIssueCreation } = issueStore?.viewFlags || {};
 
   const issues = issueIds.map((id) => issuesResponse?.[id]);
 
-  const updateIssue = (issue: IIssue, payload: IBlockUpdateData) => {
+  const updateIssueBlockStructure = async (issue: IIssue, data: IBlockUpdateData) => {
     if (!workspaceSlug) return;
 
-    //Todo fix sort order in the structure
-    issueStore.updateIssue(
-      workspaceSlug,
-      issue.project,
-      issue.id,
-      {
-        start_date: payload.start_date,
-        target_date: payload.target_date,
-      },
-      viewId
-    );
+    const payload: any = { ...data };
+    if (data.sort_order) payload.sort_order = data.sort_order.newSortOrder;
+
+    await issueStore.updateIssue(workspaceSlug.toString(), issue.project, issue.id, payload, viewId);
   };
 
-  const isAllowed = (projectDetails?.member_role || 0) >= EUserWorkspaceRoles.MEMBER;
+  const handleIssues = useCallback(
+    async (issue: IIssue, action: EIssueActions) => {
+      if (issueActions[action]) {
+        await issueActions[action]!(issue);
+      }
+    },
+    [issueActions]
+  );
+
+  const isAllowed = !!currentProjectRole && currentProjectRole >= EUserWorkspaceRoles.MEMBER;
 
   return (
     <>
-      <div className="w-full h-full">
+      <div className="h-full w-full">
         <GanttChartRoot
           border={false}
           title="Issues"
           loaderTitle="Issues"
           blocks={issues ? renderIssueBlocksStructure(issues as IIssueUnGroupedStructure) : null}
-          blockUpdateHandler={updateIssue}
-          blockToRender={(data: IIssue) => <IssueGanttBlock data={data} handleIssue={updateIssue} />}
+          blockUpdateHandler={updateIssueBlockStructure}
+          blockToRender={(data: IIssue) => <IssueGanttBlock data={data} />}
           sidebarToRender={(props) => (
             <IssueGanttSidebar
               {...props}
               quickAddCallback={issueStore.quickAddIssue}
               viewId={viewId}
               enableQuickIssueCreate
+              disableIssueCreation={!enableIssueCreation || !isAllowed}
             />
           )}
           enableBlockLeftResize={isAllowed}
@@ -95,6 +107,16 @@ export const BaseGanttRoot: React.FC<IBaseGanttRoot> = observer((props: IBaseGan
           enableReorder={appliedDisplayFilters?.order_by === "sort_order" && isAllowed}
         />
       </div>
+      {workspaceSlug && peekIssueId && peekProjectId && (
+        <IssuePeekOverview
+          workspaceSlug={workspaceSlug.toString()}
+          projectId={peekProjectId.toString()}
+          issueId={peekIssueId.toString()}
+          handleIssue={async (issueToUpdate, action) => {
+            await handleIssues(issueToUpdate as IIssue, action);
+          }}
+        />
+      )}
     </>
   );
 });

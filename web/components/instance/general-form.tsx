@@ -1,7 +1,7 @@
 import { FC } from "react";
 import { Controller, useForm } from "react-hook-form";
 // ui
-import { Button, Input, ToggleSwitch } from "@plane/ui";
+import { Button, Input } from "@plane/ui";
 // types
 import { IInstance, IInstanceAdmin } from "types/instance";
 // hooks
@@ -53,7 +53,7 @@ export const InstanceGeneralForm: FC<IInstanceGeneralForm> = (props) => {
 
   return (
     <>
-      <div className="grid grid-col grid-cols-1 md:grid-cols-2 lg:grid-cols-3 items-center justify-between gap-8 w-full">
+      <div className="grid-col grid w-full grid-cols-1 items-center justify-between gap-8 md:grid-cols-2 lg:grid-cols-3">
         <div className="flex flex-col gap-1">
           <h4 className="text-sm">Name of instance</h4>
           <Controller
@@ -69,7 +69,7 @@ export const InstanceGeneralForm: FC<IInstanceGeneralForm> = (props) => {
                 ref={ref}
                 hasError={Boolean(errors.instance_name)}
                 placeholder="Instance Name"
-                className="rounded-md font-medium w-full"
+                className="w-full rounded-md font-medium"
               />
             )}
           />
@@ -95,7 +95,7 @@ export const InstanceGeneralForm: FC<IInstanceGeneralForm> = (props) => {
             name="instance_id"
             type="text"
             value={instance.instance_id}
-            className="rounded-md font-medium w-full cursor-not-allowed !text-custom-text-400"
+            className="w-full cursor-not-allowed rounded-md font-medium !text-custom-text-400"
             disabled
           />
         </div>

@@ -49,7 +49,13 @@ export interface IModuleIssuesStore {
     data: IIssue,
     moduleId?: string | undefined
   ) => Promise<IIssue | undefined>;
-  addIssueToModule: (workspaceSlug: string, projectId: string, moduleId: string, data: IIssue) => Promise<IIssue>;
+  addIssueToModule: (
+    workspaceSlug: string,
+    moduleId: string,
+    issueIds: string[],
+    fetchAfterAddition?: boolean,
+    projectId?: string
+  ) => Promise<any>;
   removeIssueFromModule: (
     workspaceSlug: string,
     projectId: string,
@@ -105,7 +111,8 @@ export class ModuleIssuesStore extends IssueBaseStore implements IModuleIssuesSt
       const workspaceSlug = this.rootStore.workspace.workspaceSlug;
       const projectId = this.rootStore.project.projectId;
       const moduleId = this.rootStore.module.moduleId;
-      if (!workspaceSlug || !projectId || !moduleId) return;
+      const hasPermissionToCurrentProject = this.rootStore.user.hasPermissionToCurrentProject;
+      if (!workspaceSlug || !projectId || !hasPermissionToCurrentProject || !moduleId) return;
 
       const userFilters = this.rootStore?.moduleIssuesFilter?.issueFilters?.filters;
       if (userFilters) this.fetchIssues(workspaceSlug, projectId, "mutation", moduleId);
@@ -158,7 +165,7 @@ export class ModuleIssuesStore extends IssueBaseStore implements IModuleIssuesSt
       this.loader = loadType;
 
       const params = this.rootStore?.moduleIssuesFilter?.appliedFilters;
-      const response = await this.moduleService.getV3ModuleIssues(workspaceSlug, projectId, moduleId, params);
+      const response = await this.moduleService.getModuleIssues(workspaceSlug, projectId, moduleId, params);
 
       const _issues = { ...this.issues, [moduleId]: { ...response } };
 
@@ -185,9 +192,18 @@ export class ModuleIssuesStore extends IssueBaseStore implements IModuleIssuesSt
 
     try {
       const response = await this.rootStore.projectIssues.createIssue(workspaceSlug, projectId, data);
-      const issueToModule = await this.addIssueToModule(workspaceSlug, projectId, moduleId, response);
+      await this.addIssueToModule(workspaceSlug, moduleId, [response.id], false);
 
-      return issueToModule;
+      let _issues = this.issues;
+      if (!_issues) _issues = {};
+      if (!_issues[moduleId]) _issues[moduleId] = {};
+      _issues[moduleId] = { ..._issues[moduleId], ...{ [response.id]: response } };
+
+      runInAction(() => {
+        this.issues = _issues;
+      });
+
+      return response;
     } catch (error) {
       this.fetchIssues(workspaceSlug, projectId, "mutation", moduleId);
       throw error;
@@ -215,6 +231,12 @@ export class ModuleIssuesStore extends IssueBaseStore implements IModuleIssuesSt
 
       const response = await this.rootStore.projectIssues.updateIssue(workspaceSlug, projectId, issueId, data);
 
+      runInAction(() => {
+        _issues = { ...this.issues };
+        _issues[moduleId][issueId] = { ..._issues[moduleId][issueId], ...response };
+        this.issues = _issues;
+      });
+
       return response;
     } catch (error) {
       this.fetchIssues(workspaceSlug, projectId, "mutation", moduleId);
@@ -235,6 +257,7 @@ export class ModuleIssuesStore extends IssueBaseStore implements IModuleIssuesSt
       if (!_issues) _issues = {};
       if (!_issues[moduleId]) _issues[moduleId] = {};
       delete _issues?.[moduleId]?.[issueId];
+      _issues[moduleId] = { ..._issues[moduleId] };
 
       runInAction(() => {
         this.issues = _issues;
@@ -269,7 +292,7 @@ export class ModuleIssuesStore extends IssueBaseStore implements IModuleIssuesSt
 
       const response = await this.createIssue(workspaceSlug, projectId, data, moduleId);
 
-      if (this.issues) {
+      if (this.issues && response) {
         delete this.issues[moduleId][data.id as keyof IIssue];
 
         let _issues = { ...this.issues };
@@ -289,24 +312,28 @@ export class ModuleIssuesStore extends IssueBaseStore implements IModuleIssuesSt
     }
   };
 
-  addIssueToModule = async (workspaceSlug: string, projectId: string, moduleId: string, data: IIssue) => {
+  addIssueToModule = async (
+    workspaceSlug: string,
+    moduleId: string,
+    issueIds: string[],
+    fetchAfterAddition = true,
+    projectId?: string
+  ) => {
+    const activeProjectId = this.rootStore.project.projectId;
+    if (!activeProjectId && !projectId) return;
+
+    const projectIdToUpdate: string = projectId || activeProjectId || "";
+
     try {
-      const issueToModule = await this.moduleService.addIssuesToModule(workspaceSlug, projectId, moduleId, {
-        issues: [data.id],
+      const issueToModule = await this.moduleService.addIssuesToModule(workspaceSlug, projectIdToUpdate, moduleId, {
+        issues: issueIds,
       });
 
-      let _issues = this.issues;
-      if (!_issues) _issues = {};
-      if (!_issues[moduleId]) _issues[moduleId] = {};
-      _issues[moduleId] = { ..._issues[moduleId], ...{ [data.id]: data } };
-
-      runInAction(() => {
-        this.issues = _issues;
-      });
+      if (fetchAfterAddition) this.fetchIssues(workspaceSlug, projectIdToUpdate, "mutation", moduleId);
 
       return issueToModule;
     } catch (error) {
-      this.fetchIssues(workspaceSlug, projectId, "mutation", moduleId);
+      this.fetchIssues(workspaceSlug, projectIdToUpdate, "mutation", moduleId);
       throw error;
     }
   };

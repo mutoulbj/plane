@@ -11,6 +11,7 @@ from .project import (
     ProjectFavoritesViewSet,
     ProjectPublicCoverImagesEndpoint,
     ProjectDeployBoardViewSet,
+    UserProjectRolesEndpoint,
 )
 from .user import (
     UserEndpoint,
@@ -44,7 +45,6 @@ from .workspace import (
     WorkspaceUserProfileEndpoint,
     WorkspaceUserProfileIssuesEndpoint,
     WorkspaceLabelsEndpoint,
-    WorkspaceUserProfileIssuesGroupedEndpoint
 )
 from .state import StateViewSet
 from .view import (
@@ -59,13 +59,10 @@ from .cycle import (
     CycleDateCheckEndpoint,
     CycleFavoriteViewSet,
     TransferCycleIssueEndpoint,
-    CycleIssueGroupedEndpoint,
 )
 from .asset import FileAssetEndpoint, UserAssetsEndpoint, FileAssetViewSet
 from .issue import (
     IssueViewSet,
-    IssueListEndpoint,
-    IssueListGroupedEndpoint,
     WorkSpaceIssuesEndpoint,
     IssueActivityEndpoint,
     IssueCommentViewSet,
@@ -86,20 +83,19 @@ from .issue import (
 )
 
 from .auth_extended import (
-    VerifyEmailEndpoint,
-    RequestEmailVerificationEndpoint,
     ForgotPasswordEndpoint,
     ResetPasswordEndpoint,
     ChangePasswordEndpoint,
+    SetUserPasswordEndpoint,
+    EmailCheckEndpoint,
+    MagicGenerateEndpoint,
 )
 
 
 from .authentication import (
-    SignUpEndpoint,
     SignInEndpoint,
     SignOutEndpoint,
     MagicSignInEndpoint,
-    MagicSignInGenerateEndpoint,
 )
 
 from .module import (
@@ -107,7 +103,6 @@ from .module import (
     ModuleIssueViewSet,
     ModuleLinkViewSet,
     ModuleFavoriteViewSet,
-    ModuleIssueGroupedEndpoint,
 )
 
 from .api import ApiTokenEndpoint
@@ -136,7 +131,6 @@ from .page import (
     PageFavoriteViewSet,
     PageLogEndpoint,
     SubPagesEndpoint,
-    CreateIssueFromBlockEndpoint,
 )
 
 from .search import GlobalSearchEndpoint, IssueSearchEndpoint
@@ -169,4 +163,8 @@ from .exporter import ExportIssuesEndpoint
 
 from .config import ConfigurationEndpoint
 
-from .webhook import WebhookEndpoint, WebhookLogsEndpoint, WebhookSecretRegenerateEndpoint
+from .webhook import (
+    WebhookEndpoint,
+    WebhookLogsEndpoint,
+    WebhookSecretRegenerateEndpoint,
+)

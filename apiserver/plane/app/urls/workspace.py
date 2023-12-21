@@ -18,7 +18,6 @@ from plane.app.views import (
     WorkspaceUserProfileEndpoint,
     WorkspaceUserProfileIssuesEndpoint,
     WorkspaceLabelsEndpoint,
-    WorkspaceUserProfileIssuesGroupedEndpoint
 )
 
 
@@ -66,6 +65,7 @@ urlpatterns = [
             {
                 "delete": "destroy",
                 "get": "retrieve",
+                "patch": "partial_update",
             }
         ),
         name="workspace-invitations",

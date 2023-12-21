@@ -70,11 +70,11 @@ from plane.app.permissions import (
     WorkSpaceAdminPermission,
     WorkspaceEntityPermission,
     WorkspaceViewerPermission,
+    WorkspaceUserPermission,
 )
 from plane.bgtasks.workspace_invitation_task import workspace_invitation
 from plane.utils.issue_filters import issue_filters
-from plane.utils.grouper import group_results
-
+from plane.bgtasks.event_tracking_task import workspace_invite_event
 
 class WorkSpaceViewSet(BaseViewSet):
     model = Workspace
@@ -113,7 +113,10 @@ class WorkSpaceViewSet(BaseViewSet):
         return (
             self.filter_queryset(super().get_queryset().select_related("owner"))
             .order_by("name")
-            .filter(workspace_member__member=self.request.user)
+            .filter(
+                workspace_member__member=self.request.user,
+                workspace_member__is_active=True,
+            )
             .annotate(total_members=member_count)
             .annotate(total_issues=issue_count)
             .select_related("owner")
@@ -189,17 +192,21 @@ class UserWorkSpacesEndpoint(BaseAPIView):
         )
 
         workspace = (
-            (
-                Workspace.objects.prefetch_related(
-                    Prefetch("workspace_member", queryset=WorkspaceMember.objects.all())
+            Workspace.objects.prefetch_related(
+                Prefetch(
+                    "workspace_member",
+                    queryset=WorkspaceMember.objects.filter(
+                        member=request.user, is_active=True
+                    ),
                 )
-                .filter(
-                    workspace_member__member=request.user,
-                )
-                .select_related("owner")
             )
+            .select_related("owner")
             .annotate(total_members=member_count)
             .annotate(total_issues=issue_count)
+            .filter(
+                workspace_member__member=request.user, workspace_member__is_active=True
+            )
+            .distinct()
         )
 
         serializer = WorkSpaceSerializer(self.filter_queryset(workspace), many=True)
@@ -319,7 +326,7 @@ class WorkspaceInvitationsViewset(BaseViewSet):
             workspace_invitations, batch_size=10, ignore_conflicts=True
         )
 
-        current_site = request.META.get('HTTP_ORIGIN')
+        current_site = request.META.get("HTTP_ORIGIN")
 
         # Send invitations
         for invitation in workspace_invitations:
@@ -401,6 +408,16 @@ class WorkspaceJoinEndpoint(BaseAPIView):
                     # Delete the invitation
                     workspace_invite.delete()
 
+                # Send event
+                workspace_invite_event.delay(
+                    user=user.id if user is not None else None,
+                    email=email,
+                    user_agent=request.META.get("HTTP_USER_AGENT"),
+                    ip=request.META.get("REMOTE_ADDR"),
+                    event_name="MEMBER_ACCEPTED",
+                    accepted_from="EMAIL",
+                )
+
                 return Response(
                     {"message": "Workspace Invitation Accepted"},
                     status=status.HTTP_200_OK,
@@ -418,7 +435,9 @@ class WorkspaceJoinEndpoint(BaseAPIView):
         )
 
     def get(self, request, slug, pk):
-        workspace_invitation = WorkspaceMemberInvite.objects.get(workspace__slug=slug, pk=pk)
+        workspace_invitation = WorkspaceMemberInvite.objects.get(
+            workspace__slug=slug, pk=pk
+        )
         serializer = WorkSpaceMemberInviteSerializer(workspace_invitation)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -476,6 +495,18 @@ class WorkSpaceMemberViewSet(BaseViewSet):
     permission_classes = [
         WorkspaceEntityPermission,
     ]
+
+    def get_permissions(self):
+        if self.action == "leave":
+            self.permission_classes = [
+                WorkspaceUserPermission,
+            ]
+        else:
+            self.permission_classes = [
+                WorkspaceEntityPermission,
+            ]
+
+        return super(WorkSpaceMemberViewSet, self).get_permissions()
 
     search_fields = [
         "member__display_name",
@@ -1198,6 +1229,7 @@ class WorkspaceUserProfileIssuesEndpoint(BaseAPIView):
     ]
 
     def get(self, request, slug, user_id):
+        fields = [field for field in request.GET.get("fields", "").split(",") if field]
         filters = issue_filters(request.query_params, "GET")
 
         # Custom ordering for priority and state
@@ -1299,75 +1331,11 @@ class WorkspaceUserProfileIssuesEndpoint(BaseAPIView):
         else:
             issue_queryset = issue_queryset.order_by(order_by_param)
 
-        issues = IssueLiteSerializer(issue_queryset, many=True).data
-
-        ## Grouping the results
-        group_by = request.GET.get("group_by", False)
-        if group_by:
-            grouped_results = group_results(issues, group_by)
-            return Response(
-                grouped_results,
-                status=status.HTTP_200_OK,
-            )
-
-        return Response(issues, status=status.HTTP_200_OK)
-
-
-
-class WorkspaceUserProfileIssuesGroupedEndpoint(BaseAPIView):
-
-    permission_classes = [
-        WorkspaceViewerPermission,
-    ]
-
-    def get(self, request, slug, user_id):
-        filters = issue_filters(request.query_params, "GET")
-        fields = [field for field in request.GET.get("fields", "").split(",") if field]
-
-        issue_queryset = (
-            Issue.issue_objects.filter(
-                Q(assignees__in=[user_id])
-                | Q(created_by_id=user_id)
-                | Q(issue_subscribers__subscriber_id=user_id),
-                workspace__slug=slug,
-                project__project_projectmember__member=request.user,
-            )
-            .filter(**filters)
-            .annotate(
-                sub_issues_count=Issue.issue_objects.filter(parent=OuterRef("id"))
-                .order_by()
-                .annotate(count=Func(F("id"), function="Count"))
-                .values("count")
-            )
-            .select_related("project", "workspace", "state", "parent")
-            .prefetch_related("assignees", "labels")
-            .prefetch_related(
-                Prefetch(
-                    "issue_reactions",
-                    queryset=IssueReaction.objects.select_related("actor"),
-                )
-            )
-            .order_by("-created_at")
-            .annotate(
-                link_count=IssueLink.objects.filter(issue=OuterRef("id"))
-                .order_by()
-                .annotate(count=Func(F("id"), function="Count"))
-                .values("count")
-            )
-            .annotate(
-                attachment_count=IssueAttachment.objects.filter(issue=OuterRef("id"))
-                .order_by()
-                .annotate(count=Func(F("id"), function="Count"))
-                .values("count")
-            )
-        ).distinct()
-
-        issues = IssueLiteSerializer(issue_queryset, many=True, fields=fields if fields else None).data
+        issues = IssueLiteSerializer(
+            issue_queryset, many=True, fields=fields if fields else None
+        ).data
         issue_dict = {str(issue["id"]): issue for issue in issues}
-        return Response(
-            issue_dict,
-            status=status.HTTP_200_OK,
-        )
+        return Response(issue_dict, status=status.HTTP_200_OK)
 
 class WorkspaceLabelsEndpoint(BaseAPIView):
     permission_classes = [

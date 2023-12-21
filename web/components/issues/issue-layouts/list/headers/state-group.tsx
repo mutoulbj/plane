@@ -7,6 +7,7 @@ import { StateGroupIcon } from "@plane/ui";
 // helpers
 import { capitalizeFirstLetter } from "helpers/string.helper";
 import { EProjectStore } from "store/command-palette.store";
+import { IIssue } from "types";
 
 export interface IStateGroupHeader {
   column_id: string;
@@ -14,16 +15,17 @@ export interface IStateGroupHeader {
   issues_count: number;
   disableIssueCreation?: boolean;
   currentStore: EProjectStore;
+  addIssuesToView?: (issueIds: string[]) => Promise<IIssue>;
 }
 
 export const Icon = ({ stateGroup, color }: { stateGroup: any; color?: any }) => (
-  <div className="w-[14px] h-[14px] rounded-full">
+  <div className="h-[14px] w-[14px] rounded-full">
     <StateGroupIcon stateGroup={stateGroup} color={color || null} width="14" height="14" />
   </div>
 );
 
 export const StateGroupHeader: FC<IStateGroupHeader> = observer((props) => {
-  const { column_value, issues_count, disableIssueCreation, currentStore } = props;
+  const { column_value, issues_count, disableIssueCreation, currentStore, addIssuesToView } = props;
 
   const stateGroup = column_value ?? null;
 
@@ -37,6 +39,7 @@ export const StateGroupHeader: FC<IStateGroupHeader> = observer((props) => {
           issuePayload={{}}
           disableIssueCreation={disableIssueCreation}
           currentStore={currentStore}
+          addIssuesToView={addIssuesToView}
         />
       )}
     </>

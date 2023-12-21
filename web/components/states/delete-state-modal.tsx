@@ -28,7 +28,10 @@ export const DeleteStateModal: React.FC<Props> = observer((props) => {
   const { workspaceSlug } = router.query;
 
   // store
-  const { projectState: projectStateStore, trackEvent: { postHogEventTracker } } = useMobxStore();
+  const {
+    projectState: projectStateStore,
+    trackEvent: { postHogEventTracker },
+  } = useMobxStore();
 
   // states
   const [isDeleteLoading, setIsDeleteLoading] = useState(false);
@@ -47,13 +50,10 @@ export const DeleteStateModal: React.FC<Props> = observer((props) => {
 
     await projectStateStore
       .deleteState(workspaceSlug.toString(), data.project, data.id)
-      .then((res) => {
-        postHogEventTracker(
-          'STATE_DELETE',
-          {
-            state: "SUCCESS"
-          }
-        );
+      .then(() => {
+        postHogEventTracker("STATE_DELETE", {
+          state: "SUCCESS",
+        });
         handleClose();
       })
       .catch((err) => {
@@ -70,12 +70,9 @@ export const DeleteStateModal: React.FC<Props> = observer((props) => {
             title: "Error!",
             message: "State could not be deleted. Please try again.",
           });
-        postHogEventTracker(
-          'STATE_DELETE',
-          {
-            state: "FAILED"
-          }
-        )
+        postHogEventTracker("STATE_DELETE", {
+          state: "FAILED",
+        });
       })
       .finally(() => {
         setIsDeleteLoading(false);
@@ -109,12 +106,12 @@ export const DeleteStateModal: React.FC<Props> = observer((props) => {
               leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
             >
               <Dialog.Panel className="relative transform overflow-hidden rounded-lg text-left shadow-custom-shadow-md transition-all sm:my-8 sm:w-[40rem]">
-                <div className="bg-custom-background-100 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="bg-custom-background-100 px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
                   <div className="sm:flex sm:items-start">
                     <div className="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
                       <AlertTriangle className="h-6 w-6 text-red-600" aria-hidden="true" />
                     </div>
-                    <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                    <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
                       <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-custom-text-100">
                         Delete State
                       </Dialog.Title>
@@ -128,7 +125,7 @@ export const DeleteStateModal: React.FC<Props> = observer((props) => {
                     </div>
                   </div>
                 </div>
-                <div className="flex justify-end gap-2 p-4 sm:px-6 bg-custom-background-100">
+                <div className="flex justify-end gap-2 bg-custom-background-100 p-4 sm:px-6">
                   <Button variant="neutral-primary" size="sm" onClick={handleClose}>
                     Cancel
                   </Button>

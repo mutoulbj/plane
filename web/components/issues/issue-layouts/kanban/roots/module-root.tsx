@@ -11,56 +11,67 @@ import { IIssue } from "types";
 import { EIssueActions } from "../../types";
 import { BaseKanBanRoot } from "../base-kanban-root";
 import { EProjectStore } from "store/command-palette.store";
+import { IGroupedIssues, IIssueResponse, ISubGroupedIssues, TUnGroupedIssues } from "store/issues/types";
 
 export interface IModuleKanBanLayout {}
 
 export const ModuleKanBanLayout: React.FC = observer(() => {
   const router = useRouter();
-  const { workspaceSlug, moduleId } = router.query as { workspaceSlug: string; moduleId: string };
+  const { workspaceSlug, projectId, moduleId } = router.query;
 
   // store
   const {
     moduleIssues: moduleIssueStore,
     moduleIssuesFilter: moduleIssueFilterStore,
     moduleIssueKanBanView: moduleIssueKanBanViewStore,
+    kanBanHelpers: kanBanHelperStore,
   } = useMobxStore();
-
-  // const handleIssues = useCallback(
-  //   (sub_group_by: string | null, group_by: string | null, issue: IIssue, action: EIssueActions) => {
-  //     if (!workspaceSlug || !moduleId) return;
-
-  //     if (action === "update") {
-  //       moduleIssueStore.updateIssueStructure(group_by, sub_group_by, issue);
-  //       issueDetailStore.updateIssue(workspaceSlug.toString(), issue.project, issue.id, issue);
-  //     }
-  //     if (action === "delete") moduleIssueStore.deleteIssue(group_by, sub_group_by, issue);
-  //     if (action === "remove" && issue.bridge_id) {
-  //       moduleIssueStore.deleteIssue(group_by, null, issue);
-  //       moduleIssueStore.removeIssueFromModule(
-  //         workspaceSlug.toString(),
-  //         issue.project,
-  //         moduleId.toString(),
-  //         issue.bridge_id
-  //       );
-  //     }
-  //   },
-  //   [moduleIssueStore, issueDetailStore, moduleId, workspaceSlug]
-  // );
 
   const issueActions = {
     [EIssueActions.UPDATE]: async (issue: IIssue) => {
       if (!workspaceSlug || !moduleId) return;
 
-      moduleIssueStore.updateIssue(workspaceSlug.toString(), issue.project, issue.id, issue, moduleId);
+      await moduleIssueStore.updateIssue(workspaceSlug.toString(), issue.project, issue.id, issue, moduleId.toString());
     },
     [EIssueActions.DELETE]: async (issue: IIssue) => {
       if (!workspaceSlug || !moduleId) return;
-      moduleIssueStore.removeIssue(workspaceSlug, issue.project, issue.id, moduleId);
+
+      await moduleIssueStore.removeIssue(workspaceSlug.toString(), issue.project, issue.id, moduleId.toString());
     },
     [EIssueActions.REMOVE]: async (issue: IIssue) => {
       if (!workspaceSlug || !moduleId || !issue.bridge_id) return;
-      moduleIssueStore.removeIssueFromModule(workspaceSlug, issue.project, moduleId, issue.id, issue.bridge_id);
+
+      await moduleIssueStore.removeIssueFromModule(
+        workspaceSlug.toString(),
+        issue.project,
+        moduleId.toString(),
+        issue.id,
+        issue.bridge_id
+      );
     },
+  };
+
+  const handleDragDrop = async (
+    source: any,
+    destination: any,
+    subGroupBy: string | null,
+    groupBy: string | null,
+    issues: IIssueResponse | undefined,
+    issueWithIds: IGroupedIssues | ISubGroupedIssues | TUnGroupedIssues | undefined
+  ) => {
+    if (workspaceSlug && projectId && moduleId)
+      return await kanBanHelperStore.handleDragDrop(
+        source,
+        destination,
+        workspaceSlug.toString(),
+        projectId.toString(),
+        moduleIssueStore,
+        subGroupBy,
+        groupBy,
+        issues,
+        issueWithIds,
+        moduleId.toString()
+      );
   };
   return (
     <BaseKanBanRoot
@@ -70,8 +81,12 @@ export const ModuleKanBanLayout: React.FC = observer(() => {
       kanbanViewStore={moduleIssueKanBanViewStore}
       showLoader={true}
       QuickActions={ModuleIssueQuickActions}
-      viewId={moduleId}
+      viewId={moduleId?.toString() ?? ""}
       currentStore={EProjectStore.MODULE}
+      handleDragDrop={handleDragDrop}
+      addIssuesToView={(issues: string[]) =>
+        moduleIssueStore.addIssueToModule(workspaceSlug?.toString() ?? "", moduleId?.toString() ?? "", issues)
+      }
     />
   );
 });

@@ -23,6 +23,9 @@ import {
 import { observer } from "mobx-react-lite";
 import { IIssueResponse } from "store/issues/types";
 import { EProjectStore } from "store/command-palette.store";
+import { IssuePeekOverview } from "components/issues";
+import { useRouter } from "next/router";
+import { EUserWorkspaceRoles } from "constants/workspace";
 
 enum EIssueActions {
   UPDATE = "update",
@@ -47,29 +50,54 @@ interface IBaseListRoot {
     | IProfileIssuesStore;
   QuickActions: FC<IQuickActionProps>;
   issueActions: {
-    [EIssueActions.DELETE]: (group_by: string | null, issue: IIssue) => void;
-    [EIssueActions.UPDATE]?: (group_by: string | null, issue: IIssue) => void;
-    [EIssueActions.REMOVE]?: (group_by: string | null, issue: IIssue) => void;
+    [EIssueActions.DELETE]: (group_by: string | null, issue: IIssue) => Promise<void>;
+    [EIssueActions.UPDATE]?: (group_by: string | null, issue: IIssue) => Promise<void>;
+    [EIssueActions.REMOVE]?: (group_by: string | null, issue: IIssue) => Promise<void>;
   };
   getProjects: (projectStore: IProjectStore) => IProject[] | null;
   viewId?: string;
   currentStore: EProjectStore;
+  addIssuesToView?: (issueIds: string[]) => Promise<IIssue>;
+  canEditPropertiesBasedOnProject?: (projectId: string) => boolean;
 }
 
 export const BaseListRoot = observer((props: IBaseListRoot) => {
-  const { issueFilterStore, issueStore, QuickActions, issueActions, getProjects, viewId, currentStore } = props;
-
+  const {
+    issueFilterStore,
+    issueStore,
+    QuickActions,
+    issueActions,
+    getProjects,
+    viewId,
+    currentStore,
+    addIssuesToView,
+    canEditPropertiesBasedOnProject,
+  } = props;
+  // router
+  const router = useRouter();
+  const { workspaceSlug, peekIssueId, peekProjectId } = router.query;
+  // mobx store
   const {
     project: projectStore,
     projectMember: { projectMembers },
     projectState: projectStateStore,
     projectLabel: { projectLabels },
+    user: userStore,
   } = useMobxStore();
+
+  const { currentProjectRole } = userStore;
+  const isEditingAllowed = !!currentProjectRole && currentProjectRole >= EUserWorkspaceRoles.MEMBER;
 
   const issueIds = issueStore?.getIssuesIds || [];
   const issues = issueStore?.getIssues;
 
   const { enableInlineEditing, enableQuickAdd, enableIssueCreation } = issueStore?.viewFlags || {};
+  const canEditProperties = (projectId: string | undefined) => {
+    const isEditingAllowedBasedOnProject =
+      canEditPropertiesBasedOnProject && projectId ? canEditPropertiesBasedOnProject(projectId) : isEditingAllowed;
+
+    return enableInlineEditing && isEditingAllowedBasedOnProject;
+  };
 
   const displayFilters = issueFilterStore?.issueFilters?.displayFilters;
   const group_by = displayFilters?.group_by || null;
@@ -85,18 +113,18 @@ export const BaseListRoot = observer((props: IBaseListRoot) => {
   const members = projectMembers?.map((m) => m.member) ?? null;
   const handleIssues = async (issue: IIssue, action: EIssueActions) => {
     if (issueActions[action]) {
-      issueActions[action]!(group_by, issue);
+      await issueActions[action]!(group_by, issue);
     }
   };
 
   return (
     <>
       {issueStore?.loader === "init-loader" ? (
-        <div className="w-full h-full flex justify-center items-center">
+        <div className="flex h-full w-full items-center justify-center">
           <Spinner />
         </div>
       ) : (
-        <div className={`relative w-full h-full bg-custom-background-90`}>
+        <div className={`relative h-full w-full bg-custom-background-90`}>
           <List
             issues={issues as unknown as IIssueResponse}
             group_by={group_by}
@@ -127,11 +155,23 @@ export const BaseListRoot = observer((props: IBaseListRoot) => {
             viewId={viewId}
             quickAddCallback={issueStore?.quickAddIssue}
             enableIssueQuickAdd={!!enableQuickAdd}
-            isReadonly={!enableInlineEditing}
-            disableIssueCreation={!enableIssueCreation}
+            canEditProperties={canEditProperties}
+            disableIssueCreation={!enableIssueCreation || !isEditingAllowed}
             currentStore={currentStore}
+            addIssuesToView={addIssuesToView}
           />
         </div>
+      )}
+
+      {workspaceSlug && peekIssueId && peekProjectId && (
+        <IssuePeekOverview
+          workspaceSlug={workspaceSlug.toString()}
+          projectId={peekProjectId.toString()}
+          issueId={peekIssueId.toString()}
+          handleIssue={async (issueToUpdate, action: EIssueActions) =>
+            await handleIssues(issueToUpdate as IIssue, action)
+          }
+        />
       )}
     </>
   );

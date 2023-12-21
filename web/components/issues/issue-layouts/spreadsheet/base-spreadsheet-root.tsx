@@ -18,6 +18,7 @@ import { observer } from "mobx-react-lite";
 import { EFilterType, TUnGroupedIssues } from "store/issues/types";
 import { EIssueActions } from "../types";
 import { IQuickActionProps } from "../list/list-view-types";
+import { EUserWorkspaceRoles } from "constants/workspace";
 
 interface IBaseSpreadsheetRoot {
   issueFiltersStore:
@@ -33,10 +34,11 @@ interface IBaseSpreadsheetRoot {
     [EIssueActions.UPDATE]?: (issue: IIssue) => void;
     [EIssueActions.REMOVE]?: (issue: IIssue) => void;
   };
+  canEditPropertiesBasedOnProject?: (projectId: string) => boolean;
 }
 
 export const BaseSpreadsheetRoot = observer((props: IBaseSpreadsheetRoot) => {
-  const { issueFiltersStore, issueStore, viewId, QuickActions, issueActions } = props;
+  const { issueFiltersStore, issueStore, viewId, QuickActions, issueActions, canEditPropertiesBasedOnProject } = props;
 
   const router = useRouter();
   const { workspaceSlug, projectId } = router.query as { workspaceSlug: string; projectId: string };
@@ -48,7 +50,17 @@ export const BaseSpreadsheetRoot = observer((props: IBaseSpreadsheetRoot) => {
     user: userStore,
   } = useMobxStore();
 
-  const user = userStore.currentUser;
+  const { enableInlineEditing, enableQuickAdd, enableIssueCreation } = issueStore?.viewFlags || {};
+
+  const { currentProjectRole } = userStore;
+  const isEditingAllowed = !!currentProjectRole && currentProjectRole >= EUserWorkspaceRoles.MEMBER;
+
+  const canEditProperties = (projectId: string | undefined) => {
+    const isEditingAllowedBasedOnProject =
+      canEditPropertiesBasedOnProject && projectId ? canEditPropertiesBasedOnProject(projectId) : isEditingAllowed;
+
+    return enableInlineEditing && isEditingAllowedBasedOnProject;
+  };
 
   const issuesResponse = issueStore.getIssues;
   const issueIds = (issueStore.getIssuesIds ?? []) as TUnGroupedIssues;
@@ -61,7 +73,7 @@ export const BaseSpreadsheetRoot = observer((props: IBaseSpreadsheetRoot) => {
         issueActions[action]!(issue);
       }
     },
-    [issueStore]
+    [issueActions]
   );
 
   const handleDisplayFiltersUpdate = useCallback(
@@ -78,7 +90,7 @@ export const BaseSpreadsheetRoot = observer((props: IBaseSpreadsheetRoot) => {
         viewId
       );
     },
-    [issueFiltersStore, projectId, workspaceSlug]
+    [issueFiltersStore, projectId, workspaceSlug, viewId]
   );
 
   return (
@@ -87,8 +99,9 @@ export const BaseSpreadsheetRoot = observer((props: IBaseSpreadsheetRoot) => {
       displayFilters={issueFiltersStore.issueFilters?.displayFilters ?? {}}
       handleDisplayFilterUpdate={handleDisplayFiltersUpdate}
       issues={issues as IIssueUnGroupedStructure}
-      quickActions={(issue) => (
+      quickActions={(issue, customActionButton) => (
         <QuickActions
+          customActionButton={customActionButton}
           issue={issue}
           handleDelete={async () => handleIssues(issue, EIssueActions.DELETE)}
           handleUpdate={
@@ -103,10 +116,11 @@ export const BaseSpreadsheetRoot = observer((props: IBaseSpreadsheetRoot) => {
       labels={projectLabels || undefined}
       states={projectId ? projectStateStore.states?.[projectId.toString()] : undefined}
       handleIssues={handleIssues}
-      disableUserActions={false}
+      canEditProperties={canEditProperties}
       quickAddCallback={issueStore.quickAddIssue}
       viewId={viewId}
-      enableQuickCreateIssue
+      enableQuickCreateIssue={enableQuickAdd}
+      disableIssueCreation={!enableIssueCreation || !isEditingAllowed}
     />
   );
 });

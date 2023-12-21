@@ -82,9 +82,11 @@ export class IssueStore implements IIssueStore {
     autorun(() => {
       const workspaceSlug = this.rootStore.workspace.workspaceSlug;
       const projectId = this.rootStore.project.projectId;
+      const hasPermissionToCurrentProject = this.rootStore.user.hasPermissionToCurrentProject;
       if (
         workspaceSlug &&
         projectId &&
+        hasPermissionToCurrentProject &&
         this.rootStore.issueFilter.userFilters &&
         this.rootStore.issueFilter.userDisplayFilters
       )
@@ -278,7 +280,7 @@ export class IssueStore implements IIssueStore {
 
     if (newPayload.sort_order && payload.sort_order) newPayload.sort_order = payload.sort_order.newSortOrder;
 
-    this.rootStore.issueDetail.updateIssue(workspaceSlug, issue.project, issue.id, newPayload);
+    this.rootStore.projectIssues.updateIssue(workspaceSlug, issue.project, issue.id, newPayload);
   };
 
   fetchIssues = async (

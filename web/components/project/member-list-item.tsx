@@ -13,7 +13,7 @@ import { CustomSelect, Tooltip } from "@plane/ui";
 // icons
 import { ChevronDown, Dot, XCircle } from "lucide-react";
 // constants
-import { ROLE } from "constants/workspace";
+import { EUserWorkspaceRoles, ROLE } from "constants/workspace";
 // types
 import { IProjectMember, TUserProjectRole } from "types";
 
@@ -33,12 +33,13 @@ export const ProjectMemberListItem: React.FC<Props> = observer((props) => {
   const {
     user: { currentUser, currentProjectMemberInfo, currentProjectRole, leaveProject },
     projectMember: { removeMemberFromProject, updateMember },
+    project: { fetchProjects },
   } = useMobxStore();
   // hooks
   const { setToastAlert } = useToast();
 
   // derived values
-  const isAdmin = currentProjectRole === 20;
+  const isAdmin = currentProjectRole === EUserWorkspaceRoles.ADMIN;
   const memberDetails = member.member;
 
   const handleRemove = async () => {
@@ -46,7 +47,11 @@ export const ProjectMemberListItem: React.FC<Props> = observer((props) => {
 
     if (memberDetails.id === currentUser?.id) {
       await leaveProject(workspaceSlug.toString(), projectId.toString())
-        .then(() => router.push(`/${workspaceSlug}/projects`))
+        .then(async () => {
+          await fetchProjects(workspaceSlug.toString());
+
+          router.push(`/${workspaceSlug}/projects`);
+        })
         .catch((err) =>
           setToastAlert({
             type: "error",
@@ -76,27 +81,27 @@ export const ProjectMemberListItem: React.FC<Props> = observer((props) => {
         <div className="flex items-center gap-x-4 gap-y-2">
           {memberDetails.avatar && memberDetails.avatar !== "" ? (
             <Link href={`/${workspaceSlug}/profile/${memberDetails.id}`}>
-              <a className="relative flex h-10 w-10 items-center justify-center rounded p-4 capitalize text-white">
+              <span className="relative flex h-10 w-10 items-center justify-center rounded p-4 capitalize text-white">
                 <img
                   src={memberDetails.avatar}
                   alt={memberDetails.display_name || memberDetails.email}
-                  className="absolute top-0 left-0 h-full w-full object-cover rounded"
+                  className="absolute left-0 top-0 h-full w-full rounded object-cover"
                 />
-              </a>
+              </span>
             </Link>
           ) : (
             <Link href={`/${workspaceSlug}/profile/${memberDetails.id}`}>
-              <a className="relative flex h-10 w-10 items-center justify-center rounded p-4 capitalize bg-gray-700 text-white">
+              <span className="relative flex h-10 w-10 items-center justify-center rounded bg-gray-700 p-4 capitalize text-white">
                 {(memberDetails.display_name ?? memberDetails.email ?? "?")[0]}
-              </a>
+              </span>
             </Link>
           )}
 
           <div>
             <Link href={`/${workspaceSlug}/profile/${memberDetails.id}`}>
-              <a className="text-sm font-medium">
+              <span className="text-sm font-medium">
                 {memberDetails.first_name} {memberDetails.last_name}
-              </a>
+              </span>
             </Link>
             <div className="flex items-center">
               <p className="text-xs text-custom-text-300">{memberDetails.display_name}</p>
@@ -113,9 +118,9 @@ export const ProjectMemberListItem: React.FC<Props> = observer((props) => {
         <div className="flex items-center gap-2 text-xs">
           <CustomSelect
             customButton={
-              <div className="flex item-center gap-1 px-2 py-0.5 rounded">
+              <div className="item-center flex gap-1 rounded px-2 py-0.5">
                 <span
-                  className={`flex items-center text-xs font-medium rounded ${
+                  className={`flex items-center rounded text-xs font-medium ${
                     memberDetails.id !== currentProjectMemberInfo?.id ? "" : "text-custom-sidebar-text-400"
                   }`}
                 >
@@ -148,12 +153,13 @@ export const ProjectMemberListItem: React.FC<Props> = observer((props) => {
             disabled={
               memberDetails.id === currentUser?.id ||
               !member.member ||
-              (currentProjectRole && currentProjectRole !== 20 && currentProjectRole < member.role)
+              !currentProjectRole ||
+              currentProjectRole < member.role
             }
             placement="bottom-end"
           >
             {Object.keys(ROLE).map((key) => {
-              if (currentProjectRole && currentProjectRole !== 20 && currentProjectRole < parseInt(key)) return null;
+              if (currentProjectRole && !isAdmin && currentProjectRole < parseInt(key)) return null;
 
               return (
                 <CustomSelect.Option key={key} value={parseInt(key, 10)}>
@@ -162,7 +168,7 @@ export const ProjectMemberListItem: React.FC<Props> = observer((props) => {
               );
             })}
           </CustomSelect>
-          {isAdmin && (
+          {(isAdmin || memberDetails.id === currentProjectMemberInfo?.member.id) && (
             <Tooltip
               tooltipContent={
                 memberDetails.id === currentProjectMemberInfo?.member.id ? "Leave project" : "Remove member"
@@ -171,9 +177,9 @@ export const ProjectMemberListItem: React.FC<Props> = observer((props) => {
               <button
                 type="button"
                 onClick={() => setRemoveMemberModal(true)}
-                className="opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto"
+                className="pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100"
               >
-                <XCircle className="h-3.5 w-3.5 text-custom-text-400" strokeWidth={2} />
+                <XCircle className="h-3.5 w-3.5 text-red-500" strokeWidth={2} />
               </button>
             </Tooltip>
           )}

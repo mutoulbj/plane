@@ -48,7 +48,6 @@ INSTALLED_APPS = [
     "rest_framework.authtoken",
     "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
-    "taggit",
     "django_celery_beat",
     "storages",
 ]
@@ -114,7 +113,9 @@ CSRF_COOKIE_SECURE = True
 CORS_ALLOW_CREDENTIALS = True
 cors_origins_raw = os.environ.get("CORS_ALLOWED_ORIGINS", "")
 # filter out empty strings
-cors_allowed_origins = [origin.strip() for origin in cors_origins_raw.split(",") if origin.strip()]
+cors_allowed_origins = [
+    origin.strip() for origin in cors_origins_raw.split(",") if origin.strip()
+]
 if cors_allowed_origins:
     CORS_ALLOWED_ORIGINS = cors_allowed_origins
 else:
@@ -189,6 +190,9 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+# Password reset time the number of seconds the uniquely generated uid will be valid
+PASSWORD_RESET_TIMEOUT = 3600
+
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = "/static/"
 STATIC_ROOT = os.path.join(BASE_DIR, "static-assets", "collected-static")
@@ -240,7 +244,7 @@ if AWS_S3_ENDPOINT_URL:
 
 # JWT Auth Configuration
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=10080),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=43200),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=43200),
     "ROTATE_REFRESH_TOKENS": False,
     "BLACKLIST_AFTER_ROTATION": False,
@@ -291,7 +295,7 @@ CELERY_IMPORTS = (
 
 # Sentry Settings
 # Enable Sentry Settings
-if bool(os.environ.get("SENTRY_DSN", False)):
+if bool(os.environ.get("SENTRY_DSN", False)) and os.environ.get("SENTRY_DSN").startswith("https://"):
     sentry_sdk.init(
         dsn=os.environ.get("SENTRY_DSN", ""),
         integrations=[
@@ -310,7 +314,6 @@ if bool(os.environ.get("SENTRY_DSN", False)):
 PROXY_BASE_URL = os.environ.get("PROXY_BASE_URL", False)  # For External
 SLACK_BOT_TOKEN = os.environ.get("SLACK_BOT_TOKEN", False)
 FILE_SIZE_LIMIT = int(os.environ.get("FILE_SIZE_LIMIT", 5242880))
-ENABLE_SIGNUP = os.environ.get("ENABLE_SIGNUP", "1") == "1"
 
 # Unsplash Access key
 UNSPLASH_ACCESS_KEY = os.environ.get("UNSPLASH_ACCESS_KEY")
@@ -327,3 +330,11 @@ USE_MINIO = int(os.environ.get("USE_MINIO", 0)) == 1
 # Posthog settings
 POSTHOG_API_KEY = os.environ.get("POSTHOG_API_KEY", False)
 POSTHOG_HOST = os.environ.get("POSTHOG_HOST", False)
+
+# instance key
+INSTANCE_KEY = os.environ.get(
+    "INSTANCE_KEY", "ae6517d563dfc13d8270bd45cf17b08f70b37d989128a9dab46ff687603333c3"
+)
+
+# Skip environment variable configuration
+SKIP_ENV_VAR = os.environ.get("SKIP_ENV_VAR", "1") == "1"

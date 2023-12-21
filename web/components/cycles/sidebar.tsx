@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { observer } from "mobx-react-lite";
-import { mutate } from "swr";
 import { useForm } from "react-hook-form";
 import { Disclosure, Popover, Transition } from "@headlessui/react";
 // mobx store
@@ -30,9 +29,11 @@ import {
   renderShortMonthDate,
 } from "helpers/date-time.helper";
 // types
-import { ICycle } from "types";
+import { ICycle, IIssueFilterOptions } from "types";
+import { EFilterType } from "store/issues/types";
+// constants
+import { EUserWorkspaceRoles } from "constants/workspace";
 // fetch-keys
-import { CYCLE_DETAILS } from "constants/fetch-keys";
 import { CYCLE_STATUS } from "constants/cycle";
 
 type Props = {
@@ -52,7 +53,12 @@ export const CycleDetailsSidebar: React.FC<Props> = observer((props) => {
   const router = useRouter();
   const { workspaceSlug, projectId, peekCycle } = router.query;
 
-  const { cycle: cycleDetailsStore, trackEvent: { setTrackElement, postHogEventTracker } } = useMobxStore();
+  const {
+    cycle: cycleDetailsStore,
+    cycleIssuesFilter: { issueFilters, updateFilters },
+    trackEvent: { setTrackElement },
+    user: { currentProjectRole },
+  } = useMobxStore();
 
   const cycleDetails = cycleDetailsStore.cycle_details[cycleId] ?? undefined;
 
@@ -70,31 +76,7 @@ export const CycleDetailsSidebar: React.FC<Props> = observer((props) => {
   const submitChanges = (data: Partial<ICycle>) => {
     if (!workspaceSlug || !projectId || !cycleId) return;
 
-    mutate<ICycle>(CYCLE_DETAILS(cycleId as string), (prevData) => ({ ...(prevData as ICycle), ...data }), false);
-
-    cycleService
-      .patchCycle(workspaceSlug as string, projectId as string, cycleId as string, data)
-      .then((res) => {
-        mutate(CYCLE_DETAILS(cycleId as string));
-        postHogEventTracker(
-          "CYCLE_UPDATE",
-          {
-            ...res,
-            state: "SUCCESS"
-          }
-        );
-      }
-      )
-      .catch((e) => {
-        console.log(e);
-        postHogEventTracker(
-          "CYCLE_UPDATE",
-          {
-            state: "FAILED"
-          }
-        );
-      }
-      );
+    cycleDetailsStore.patchCycle(workspaceSlug.toString(), projectId.toString(), cycleId.toString(), data);
   };
 
   const handleCopyText = () => {
@@ -265,6 +247,25 @@ export const CycleDetailsSidebar: React.FC<Props> = observer((props) => {
     }
   };
 
+  const handleFiltersUpdate = useCallback(
+    (key: keyof IIssueFilterOptions, value: string | string[]) => {
+      if (!workspaceSlug || !projectId) return;
+      const newValues = issueFilters?.filters?.[key] ?? [];
+
+      if (Array.isArray(value)) {
+        value.forEach((val) => {
+          if (!newValues.includes(val)) newValues.push(val);
+        });
+      } else {
+        if (issueFilters?.filters?.[key]?.includes(value)) newValues.splice(newValues.indexOf(value), 1);
+        else newValues.push(value);
+      }
+
+      updateFilters(workspaceSlug.toString(), projectId.toString(), EFilterType.FILTERS, { [key]: newValues }, cycleId);
+    },
+    [workspaceSlug, projectId, cycleId, issueFilters, updateFilters]
+  );
+
   const cycleStatus =
     cycleDetails?.start_date && cycleDetails?.end_date
       ? getDateRangeStatus(cycleDetails?.start_date, cycleDetails?.end_date)
@@ -293,10 +294,11 @@ export const CycleDetailsSidebar: React.FC<Props> = observer((props) => {
       </Loader>
     );
 
-  const endDate = new Date(cycleDetails.end_date ?? "");
-  const startDate = new Date(cycleDetails.start_date ?? "");
+  const endDate = new Date(watch("end_date") ?? cycleDetails.end_date ?? "");
+  const startDate = new Date(watch("start_date") ?? cycleDetails.start_date ?? "");
 
-  const areYearsEqual = startDate.getFullYear() === endDate.getFullYear();
+  const areYearsEqual =
+    startDate.getFullYear() === endDate.getFullYear() || isNaN(startDate.getFullYear()) || isNaN(endDate.getFullYear());
 
   const currentCycle = CYCLE_STATUS.find((status) => status.value === cycleStatus);
 
@@ -308,6 +310,8 @@ export const CycleDetailsSidebar: React.FC<Props> = observer((props) => {
           ? `${cycleDetails.total_issues}`
           : `${cycleDetails.total_issues}`
         : `${cycleDetails.completed_issues}/${cycleDetails.total_issues}`;
+
+  const isEditingAllowed = !!currentProjectRole && currentProjectRole >= EUserWorkspaceRoles.MEMBER;
 
   return (
     <>
@@ -322,26 +326,27 @@ export const CycleDetailsSidebar: React.FC<Props> = observer((props) => {
       )}
 
       <>
-        <div className="flex items-center justify-between w-full">
+        <div className="flex w-full items-center justify-between">
           <div>
             <button
-              className="flex items-center justify-center h-5 w-5 rounded-full bg-custom-border-300"
+              className="flex h-5 w-5 items-center justify-center rounded-full bg-custom-border-300"
               onClick={() => handleClose()}
             >
-              <ChevronRight className="h-3 w-3 text-white stroke-2" />
+              <ChevronRight className="h-3 w-3 stroke-2 text-white" />
             </button>
           </div>
           <div className="flex items-center gap-3.5">
             <button onClick={handleCopyText}>
               <LinkIcon className="h-3 w-3 text-custom-text-300" />
             </button>
-            {!isCompleted && (
+            {!isCompleted && isEditingAllowed && (
               <CustomMenu width="lg" placement="bottom-end" ellipsis>
-                <CustomMenu.MenuItem onClick={() => {
-                  setTrackElement("CYCLE_PAGE_SIDEBAR");
-                  setCycleDeleteModal(true)
-                }
-                }>
+                <CustomMenu.MenuItem
+                  onClick={() => {
+                    setTrackElement("CYCLE_PAGE_SIDEBAR");
+                    setCycleDeleteModal(true);
+                  }}
+                >
                   <span className="flex items-center justify-start gap-2">
                     <Trash2 className="h-3 w-3" />
                     <span>Delete cycle</span>
@@ -353,11 +358,11 @@ export const CycleDetailsSidebar: React.FC<Props> = observer((props) => {
         </div>
 
         <div className="flex flex-col gap-3">
-          <h4 className="text-xl font-semibold break-words w-full text-custom-text-100">{cycleDetails.name}</h4>
+          <h4 className="w-full break-words text-xl font-semibold text-custom-text-100">{cycleDetails.name}</h4>
           <div className="flex items-center gap-5">
             {currentCycle && (
               <span
-                className="flex items-center justify-center text-xs text-center h-6 w-20 rounded-sm"
+                className="flex h-6 w-20 items-center justify-center rounded-sm text-center text-xs"
                 style={{
                   color: currentCycle.color,
                   backgroundColor: `${currentCycle.color}20`,
@@ -371,8 +376,10 @@ export const CycleDetailsSidebar: React.FC<Props> = observer((props) => {
             <div className="relative flex h-full w-52 items-center gap-2.5">
               <Popover className="flex h-full items-center justify-center rounded-lg">
                 <Popover.Button
-                  disabled={isCompleted ?? false}
-                  className="text-sm text-custom-text-300 font-medium cursor-default"
+                  className={`text-sm font-medium text-custom-text-300 ${
+                    isEditingAllowed ? "cursor-pointer" : "cursor-not-allowed"
+                  }`}
+                  disabled={isCompleted || !isEditingAllowed}
                 >
                   {areYearsEqual ? renderShortDate(startDate, "_ _") : renderShortMonthDate(startDate, "_ _")}
                 </Popover.Button>
@@ -386,7 +393,7 @@ export const CycleDetailsSidebar: React.FC<Props> = observer((props) => {
                   leaveFrom="opacity-100 translate-y-0"
                   leaveTo="opacity-0 translate-y-1"
                 >
-                  <Popover.Panel className="absolute top-10 -right-5 z-20  transform overflow-hidden">
+                  <Popover.Panel className="absolute -right-5 top-10 z-20  transform overflow-hidden">
                     <CustomRangeDatePicker
                       value={watch("start_date") ? watch("start_date") : cycleDetails?.start_date}
                       onChange={(val) => {
@@ -395,10 +402,10 @@ export const CycleDetailsSidebar: React.FC<Props> = observer((props) => {
                           handleStartDateChange(val);
                         }
                       }}
-                      startDate={watch("start_date") ? `${watch("start_date")}` : null}
-                      endDate={watch("end_date") ? `${watch("end_date")}` : null}
+                      startDate={watch("start_date") ?? watch("end_date") ?? null}
+                      endDate={watch("end_date") ?? watch("start_date") ?? null}
                       maxDate={new Date(`${watch("end_date")}`)}
-                      selectsStart
+                      selectsStart={watch("end_date") ? true : false}
                     />
                   </Popover.Panel>
                 </Transition>
@@ -407,8 +414,10 @@ export const CycleDetailsSidebar: React.FC<Props> = observer((props) => {
               <Popover className="flex h-full items-center justify-center rounded-lg">
                 <>
                   <Popover.Button
-                    disabled={isCompleted ?? false}
-                    className="text-sm text-custom-text-300 font-medium cursor-default"
+                    className={`text-sm font-medium text-custom-text-300 ${
+                      isEditingAllowed ? "cursor-pointer" : "cursor-not-allowed"
+                    }`}
+                    disabled={isCompleted || !isEditingAllowed}
                   >
                     {areYearsEqual ? renderShortDate(endDate, "_ _") : renderShortMonthDate(endDate, "_ _")}
                   </Popover.Button>
@@ -422,7 +431,7 @@ export const CycleDetailsSidebar: React.FC<Props> = observer((props) => {
                     leaveFrom="opacity-100 translate-y-0"
                     leaveTo="opacity-0 translate-y-1"
                   >
-                    <Popover.Panel className="absolute top-10 -right-5 z-20 transform overflow-hidden">
+                    <Popover.Panel className="absolute -right-5 top-10 z-20 transform overflow-hidden">
                       <CustomRangeDatePicker
                         value={watch("end_date") ? watch("end_date") : cycleDetails?.end_date}
                         onChange={(val) => {
@@ -431,10 +440,10 @@ export const CycleDetailsSidebar: React.FC<Props> = observer((props) => {
                             handleEndDateChange(val);
                           }
                         }}
-                        startDate={watch("start_date") ? `${watch("start_date")}` : null}
-                        endDate={watch("end_date") ? `${watch("end_date")}` : null}
+                        startDate={watch("start_date") ?? watch("end_date") ?? null}
+                        endDate={watch("end_date") ?? watch("start_date") ?? null}
                         minDate={new Date(`${watch("start_date")}`)}
-                        selectsEnd
+                        selectsEnd={watch("start_date") ? true : false}
                       />
                     </Popover.Panel>
                   </Transition>
@@ -445,18 +454,18 @@ export const CycleDetailsSidebar: React.FC<Props> = observer((props) => {
         </div>
 
         {cycleDetails.description && (
-          <span className="whitespace-normal text-sm leading-5 py-2.5 text-custom-text-200 break-words w-full">
+          <span className="w-full whitespace-normal break-words py-2.5 text-sm leading-5 text-custom-text-200">
             {cycleDetails.description}
           </span>
         )}
 
-        <div className="flex flex-col gap-5 pt-2.5 pb-6">
+        <div className="flex flex-col gap-5 pb-6 pt-2.5">
           <div className="flex items-center justify-start gap-1">
             <div className="flex w-1/2 items-center justify-start gap-2 text-custom-text-300">
               <UserCircle2 className="h-4 w-4" />
               <span className="text-base">Lead</span>
             </div>
-            <div className="flex items-center w-1/2 rounded-sm">
+            <div className="flex w-1/2 items-center rounded-sm">
               <div className="flex items-center gap-2.5">
                 <Avatar name={cycleDetails.owned_by.display_name} src={cycleDetails.owned_by.avatar} />
                 <span className="text-sm text-custom-text-200">{cycleDetails.owned_by.display_name}</span>
@@ -469,14 +478,14 @@ export const CycleDetailsSidebar: React.FC<Props> = observer((props) => {
               <LayersIcon className="h-4 w-4" />
               <span className="text-base">Issues</span>
             </div>
-            <div className="flex items-center w-1/2">
-              <span className="text-sm text-custom-text-300 px-1.5">{issueCount}</span>
+            <div className="flex w-1/2 items-center">
+              <span className="px-1.5 text-sm text-custom-text-300">{issueCount}</span>
             </div>
           </div>
         </div>
 
         <div className="flex flex-col">
-          <div className="flex w-full flex-col items-center justify-start gap-2 border-t border-custom-border-200 py-5 px-1.5">
+          <div className="flex w-full flex-col items-center justify-start gap-2 border-t border-custom-border-200 px-1.5 py-5">
             <Disclosure defaultOpen>
               {({ open }) => (
                 <div className={`relative  flex  h-full w-full flex-col ${open ? "" : "flex-row"}`}>
@@ -490,7 +499,7 @@ export const CycleDetailsSidebar: React.FC<Props> = observer((props) => {
 
                     <div className="flex items-center gap-2.5">
                       {progressPercentage ? (
-                        <span className="flex items-center justify-center h-5 w-9 rounded text-xs font-medium text-amber-500 bg-amber-50">
+                        <span className="flex h-5 w-9 items-center justify-center rounded bg-amber-500/20 text-xs font-medium text-amber-500">
                           {progressPercentage ? `${progressPercentage}%` : ""}
                         </span>
                       ) : (
@@ -538,7 +547,7 @@ export const CycleDetailsSidebar: React.FC<Props> = observer((props) => {
                           ""
                         )}
                         {cycleDetails.total_issues > 0 && cycleDetails.distribution && (
-                          <div className="h-full w-full pt-5 border-t border-custom-border-200">
+                          <div className="h-full w-full border-t border-custom-border-200 pt-5">
                             <SidebarProgressStats
                               distribution={cycleDetails.distribution}
                               groupedIssues={{
@@ -550,6 +559,9 @@ export const CycleDetailsSidebar: React.FC<Props> = observer((props) => {
                               }}
                               totalIssues={cycleDetails.total_issues}
                               isPeekView={Boolean(peekCycle)}
+                              isCompleted={isCompleted}
+                              filters={issueFilters?.filters}
+                              handleFiltersUpdate={handleFiltersUpdate}
                             />
                           </div>
                         )}

@@ -1,22 +1,24 @@
 # Python imports
 import json
-import os
 import requests
-import uuid
+import secrets
 
 # Django imports
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
-from django.core.exceptions import ValidationError
-from django.core.validators import validate_email
+from django.conf import settings
 
 # Module imports
+from plane.license.models import Instance
 from plane.db.models import User
-from plane.license.models import Instance, InstanceAdmin
-
 
 class Command(BaseCommand):
     help = "Check if instance in registered else register"
+
+    def add_arguments(self, parser):
+        # Positional argument
+        parser.add_argument('machine_signature', type=str, help='Machine signature')
+
 
     def handle(self, *args, **options):
         # Check if the instance is registered
@@ -28,75 +30,37 @@ class Command(BaseCommand):
                 # Load JSON content from the file
                 data = json.load(file)
 
-            admin_email = os.environ.get("ADMIN_EMAIL")
+            machine_signature = options.get("machine_signature", "machine-signature")
 
-            try:
-                validate_email(admin_email)
-            except ValidationError:
-                CommandError(f"{admin_email} is not a valid ADMIN_EMAIL")
-
-            # Raise an exception if the admin email is not provided
-            if not admin_email:
-                raise CommandError("ADMIN_EMAIL is required")
-
-            # Check if the admin email user exists
-            user = User.objects.filter(email=admin_email).first()
-
-            # If the user does not exist create the user and add him to the database
-            if user is None:
-                user = User.objects.create(email=admin_email, username=uuid.uuid4().hex)
-                user.set_password(admin_email)
-                user.save()
-
-            license_engine_base_url = os.environ.get("LICENSE_ENGINE_BASE_URL")
-
-            if not license_engine_base_url:
-                raise CommandError("LICENSE_ENGINE_BASE_URL is required")
-
-            headers = {"Content-Type": "application/json"}
+            if not machine_signature:
+                raise CommandError("Machine signature is required")
 
             payload = {
-                "email": user.email,
+                "instance_key": settings.INSTANCE_KEY,
                 "version": data.get("version", 0.1),
+                "machine_signature": machine_signature,
+                "user_count": User.objects.filter(is_bot=False).count(),
             }
 
-            response = requests.post(
-                f"{license_engine_base_url}/api/instances/",
-                headers=headers,
-                data=json.dumps(payload),
+            instance = Instance.objects.create(
+                instance_name="Plane Free",
+                instance_id=secrets.token_hex(12),
+                license_key=None,
+                api_key=secrets.token_hex(8),
+                version=payload.get("version"),
+                last_checked_at=timezone.now(),
+                user_count=payload.get("user_count", 0),
             )
 
-            if response.status_code == 201:
-                data = response.json()
-                # Create instance
-                instance = Instance.objects.create(
-                    instance_name="Plane Free",
-                    instance_id=data.get("id"),
-                    license_key=data.get("license_key"),
-                    api_key=data.get("api_key"),
-                    version=data.get("version"),
-                    primary_email=data.get("email"),
-                    primary_owner=user,
-                    last_checked_at=timezone.now(),
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"Instance registered"
                 )
-                # Create instance admin
-                _ = InstanceAdmin.objects.create(
-                    user=user,
-                    instance=instance,
-                    role=20,
-                )
-
-                self.stdout.write(
-                    self.style.SUCCESS(
-                        f"Instance successfully registered with owner: {instance.primary_owner.email}"
-                    )
-                )
-                return
-            raise CommandError("Instance could not be registered")
+            )
         else:
             self.stdout.write(
                 self.style.SUCCESS(
-                    f"Instance already registered with instance owner: {instance.primary_owner.email}"
+                    f"Instance already registered"
                 )
             )
             return

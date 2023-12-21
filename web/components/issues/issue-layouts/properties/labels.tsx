@@ -6,15 +6,16 @@ import { usePopper } from "react-popper";
 // components
 import { Combobox } from "@headlessui/react";
 import { Tooltip } from "@plane/ui";
-import { Check, ChevronDown, Search } from "lucide-react";
+import { Check, ChevronDown, Search, Tags } from "lucide-react";
 // types
 import { Placement } from "@popperjs/core";
 import { RootStore } from "store/root";
+import { IIssueLabel } from "types";
 
 export interface IIssuePropertyLabels {
-  view?: "profile" | "workspace" | "project";
   projectId: string | null;
   value: string[];
+  defaultOptions?: any;
   onChange: (data: string[]) => void;
   disabled?: boolean;
   hideDropdownArrow?: boolean;
@@ -24,13 +25,14 @@ export interface IIssuePropertyLabels {
   placement?: Placement;
   maxRender?: number;
   noLabelBorder?: boolean;
+  placeholderText?: string;
 }
 
 export const IssuePropertyLabels: React.FC<IIssuePropertyLabels> = observer((props) => {
   const {
-    view,
     projectId,
     value,
+    defaultOptions = [],
     onChange,
     disabled,
     hideDropdownArrow = false,
@@ -40,11 +42,12 @@ export const IssuePropertyLabels: React.FC<IIssuePropertyLabels> = observer((pro
     placement,
     maxRender = 2,
     noLabelBorder = false,
+    placeholderText,
   } = props;
 
   const {
     workspace: workspaceStore,
-    projectLabel: { fetchProjectLabels, projectLabels },
+    projectLabel: { fetchProjectLabels, labels },
   }: RootStore = useMobxStore();
   const workspaceSlug = workspaceStore?.workspaceSlug;
 
@@ -61,7 +64,11 @@ export const IssuePropertyLabels: React.FC<IIssuePropertyLabels> = observer((pro
 
   if (!value) return null;
 
-  const options = (projectLabels ? projectLabels : []).map((label) => ({
+  let projectLabels: IIssueLabel[] = defaultOptions;
+  const storeLabels = projectId && labels ? labels[projectId] : [];
+  if (storeLabels && storeLabels.length > 0) projectLabels = storeLabels;
+
+  const options = projectLabels.map((label) => ({
     value: label.id,
     query: label.name,
     content: (
@@ -72,7 +79,7 @@ export const IssuePropertyLabels: React.FC<IIssuePropertyLabels> = observer((pro
             backgroundColor: label.color,
           }}
         />
-        <div className="truncate inline-block line-clamp-1">{label.name}</div>
+        <div className="line-clamp-1 inline-block truncate">{label.name}</div>
       </div>
     ),
   }));
@@ -93,44 +100,44 @@ export const IssuePropertyLabels: React.FC<IIssuePropertyLabels> = observer((pro
   });
 
   const label = (
-    <div className="overflow-hidden flex flex-wrap items-center h-5 gap-2 text-custom-text-200 w-full">
+    <div className="flex h-5 w-full flex-wrap items-center gap-2 overflow-hidden text-custom-text-200">
       {value.length > 0 ? (
         value.length <= maxRender ? (
           <>
-            {(projectLabels ? projectLabels : [])
+            {projectLabels
               ?.filter((l) => value.includes(l.id))
               .map((label) => (
-                <Tooltip position="top" tooltipHeading="Labels" tooltipContent={label.name ?? ""}>
+                <Tooltip position="top" tooltipHeading="Label" tooltipContent={label.name ?? ""}>
                   <div
                     key={label.id}
-                    className={`overflow-hidden flex hover:bg-custom-background-80 ${
+                    className={`flex overflow-hidden hover:bg-custom-background-80 ${
                       !disabled && "cursor-pointer"
-                    } items-center flex-shrink-0 rounded border-[0.5px] border-custom-border-300 px-2.5 py-1 text-xs h-full max-w-full`}
+                    } h-full max-w-full flex-shrink-0 items-center rounded border-[0.5px] border-custom-border-300 px-2.5 py-1 text-xs`}
                   >
-                    <div className="overflow-hidden flex items-center gap-1.5 text-custom-text-200 max-w-full">
+                    <div className="flex max-w-full items-center gap-1.5 overflow-hidden text-custom-text-200">
                       <span
                         className="h-2 w-2 flex-shrink-0 rounded-full"
                         style={{
                           backgroundColor: label?.color ?? "#000000",
                         }}
                       />
-                      <div className="truncate line-clamp-1 inline-block w-auto max-w-[100px]">{label.name}</div>
+                      <div className="line-clamp-1 inline-block w-auto max-w-[100px] truncate">{label.name}</div>
                     </div>
                   </div>
                 </Tooltip>
               ))}
           </>
         ) : (
-          <div className="h-full flex cursor-pointer items-center flex-shrink-0 rounded border-[0.5px] border-custom-border-300 px-2.5 py-1 text-xs">
+          <div className="flex h-full flex-shrink-0 cursor-pointer items-center rounded border-[0.5px] border-custom-border-300 px-2.5 py-1 text-xs">
             <Tooltip
               position="top"
               tooltipHeading="Labels"
-              tooltipContent={(projectLabels ? projectLabels : [])
+              tooltipContent={projectLabels
                 ?.filter((l) => value.includes(l.id))
                 .map((l) => l.name)
                 .join(", ")}
             >
-              <div className="h-full flex items-center gap-1.5 text-custom-text-200">
+              <div className="flex h-full items-center gap-1.5 text-custom-text-200">
                 <span className="h-2 w-2 flex-shrink-0 rounded-full bg-custom-primary" />
                 {`${value.length} Labels`}
               </div>
@@ -138,13 +145,16 @@ export const IssuePropertyLabels: React.FC<IIssuePropertyLabels> = observer((pro
           </div>
         )
       ) : (
-        <div
-          className={`h-full flex items-center justify-center text-xs rounded px-2.5 py-1 hover:bg-custom-background-80 ${
-            noLabelBorder ? "" : "border-[0.5px] border-custom-border-300"
-          }`}
-        >
-          Select labels
-        </div>
+        <Tooltip position="top" tooltipHeading="Labels" tooltipContent="None">
+          <div
+            className={`h-full flex items-center justify-center gap-2 rounded px-2.5 py-1 text-xs hover:bg-custom-background-80 ${
+              noLabelBorder ? "" : "border-[0.5px] border-custom-border-300"
+            }`}
+          >
+            <Tags className="h-3.5 w-3.5" strokeWidth={2} />
+            {placeholderText}
+          </div>
+        </Tooltip>
       )}
     </div>
   );
@@ -152,7 +162,7 @@ export const IssuePropertyLabels: React.FC<IIssuePropertyLabels> = observer((pro
   return (
     <Combobox
       as="div"
-      className={`flex-shrink-0 text-left w-auto max-w-full ${className}`}
+      className={`w-auto max-w-full flex-shrink-0 text-left ${className}`}
       value={value}
       onChange={onChange}
       disabled={disabled}
@@ -162,14 +172,17 @@ export const IssuePropertyLabels: React.FC<IIssuePropertyLabels> = observer((pro
         <button
           ref={setReferenceElement}
           type="button"
-          className={`flex items-center justify-between gap-1 w-full text-xs ${
+          className={`flex w-full items-center justify-between gap-1 text-xs ${
             disabled
               ? "cursor-not-allowed text-custom-text-200"
               : value.length <= maxRender
               ? "cursor-pointer"
               : "cursor-pointer hover:bg-custom-background-80"
           }  ${buttonClassName}`}
-          onClick={() => !projectLabels && fetchLabels()}
+          onClick={(e) => {
+            e.stopPropagation();
+            !storeLabels && fetchLabels();
+          }}
         >
           {label}
           {!hideDropdownArrow && !disabled && <ChevronDown className="h-3 w-3" aria-hidden="true" />}
@@ -178,7 +191,7 @@ export const IssuePropertyLabels: React.FC<IIssuePropertyLabels> = observer((pro
 
       <Combobox.Options className="fixed z-10">
         <div
-          className={`z-10 border border-custom-border-300 px-2 py-2.5 rounded bg-custom-background-100 text-xs shadow-custom-shadow-rg focus:outline-none w-48 whitespace-nowrap my-1 ${optionsClassName}`}
+          className={`z-10 my-1 w-48 whitespace-nowrap rounded border border-custom-border-300 bg-custom-background-100 px-2 py-2.5 text-xs shadow-custom-shadow-rg focus:outline-none ${optionsClassName}`}
           ref={setPopperElement}
           style={styles.popper}
           {...attributes.popper}
@@ -186,14 +199,14 @@ export const IssuePropertyLabels: React.FC<IIssuePropertyLabels> = observer((pro
           <div className="flex w-full items-center justify-start rounded border border-custom-border-200 bg-custom-background-90 px-2">
             <Search className="h-3.5 w-3.5 text-custom-text-300" />
             <Combobox.Input
-              className="w-full bg-transparent py-1 px-2 text-xs text-custom-text-200 placeholder:text-custom-text-400 focus:outline-none"
+              className="w-full bg-transparent px-2 py-1 text-xs text-custom-text-200 placeholder:text-custom-text-400 focus:outline-none"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search"
               displayValue={(assigned: any) => assigned?.name}
             />
           </div>
-          <div className={`mt-2 space-y-1 max-h-48 overflow-y-scroll`}>
+          <div className={`mt-2 max-h-48 space-y-1 overflow-y-scroll`}>
             {isLoading ? (
               <p className="text-center text-custom-text-200">Loading...</p>
             ) : filteredOptions.length > 0 ? (
@@ -201,11 +214,12 @@ export const IssuePropertyLabels: React.FC<IIssuePropertyLabels> = observer((pro
                 <Combobox.Option
                   key={option.value}
                   value={option.value}
-                  className={({ active, selected }) =>
-                    `flex items-center justify-between gap-2 cursor-pointer select-none truncate rounded px-1 py-1.5 ${
-                      active ? "bg-custom-background-80" : ""
-                    } ${selected ? "text-custom-text-100" : "text-custom-text-200"}`
+                  className={({ selected }) =>
+                    `flex cursor-pointer select-none items-center justify-between gap-2 truncate rounded px-1 py-1.5 hover:bg-custom-background-80 ${
+                      selected ? "text-custom-text-100" : "text-custom-text-200"
+                    }`
                   }
+                  onClick={(e) => e.stopPropagation()}
                 >
                   {({ selected }) => (
                     <>

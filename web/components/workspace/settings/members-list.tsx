@@ -9,18 +9,14 @@ import { WorkspaceMembersListItem } from "components/workspace";
 // ui
 import { Loader } from "@plane/ui";
 
-export const WorkspaceMembersList: FC<{ searchQuery: string }> = observer(({ searchQuery }) => {
+export const WorkspaceMembersList: FC<{ searchQuery: string }> = observer((props) => {
+  const { searchQuery } = props;
+  // router
   const router = useRouter();
   const { workspaceSlug } = router.query;
   // store
   const {
-    workspaceMember: {
-      workspaceMembers,
-      workspaceMembersWithInvitations,
-      workspaceMemberInvitations,
-      fetchWorkspaceMemberInvitations,
-    },
-    user: { currentWorkspaceMemberInfo },
+    workspaceMember: { workspaceMembersWithInvitations, fetchWorkspaceMemberInvitations },
   } = useMobxStore();
   // fetching workspace invitations
   useSWR(
@@ -36,12 +32,7 @@ export const WorkspaceMembersList: FC<{ searchQuery: string }> = observer(({ sea
     return `${email}${displayName}${fullName}`.includes(searchQuery.toLowerCase());
   });
 
-  if (
-    !workspaceMembers ||
-    !workspaceMemberInvitations ||
-    !workspaceMembersWithInvitations ||
-    !currentWorkspaceMemberInfo
-  )
+  if (!workspaceMembersWithInvitations)
     return (
       <Loader className="space-y-5">
         <Loader.Item height="40px" />
@@ -57,7 +48,7 @@ export const WorkspaceMembersList: FC<{ searchQuery: string }> = observer(({ sea
         ? searchedMembers?.map((member) => <WorkspaceMembersListItem key={member.id} member={member} />)
         : null}
       {searchedMembers?.length === 0 && (
-        <h4 className="text-sm text-custom-text-400 text-center mt-16">No matching members</h4>
+        <h4 className="mt-16 text-center text-sm text-custom-text-400">No matching members</h4>
       )}
     </div>
   );

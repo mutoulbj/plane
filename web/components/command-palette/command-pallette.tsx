@@ -34,6 +34,7 @@ export const CommandPalette: FC = observer(() => {
     theme: { toggleSidebar },
     user: { currentUser },
     trackEvent: { setTrackElement },
+    projectIssues: { removeIssue },
   } = useMobxStore();
   const {
     toggleCommandPaletteModal,
@@ -55,21 +56,9 @@ export const CommandPalette: FC = observer(() => {
     toggleBulkDeleteIssueModal,
     isDeleteIssueModalOpen,
     toggleDeleteIssueModal,
-
+    isAnyModalOpen,
     createIssueStoreType,
   } = commandPalette;
-
-  const isAnyModalOpen = Boolean(
-    isCreateIssueModalOpen ||
-      isCreateCycleModalOpen ||
-      isCreatePageModalOpen ||
-      isCreateProjectModalOpen ||
-      isCreateModuleModalOpen ||
-      isCreateViewModalOpen ||
-      isShortcutModalOpen ||
-      isBulkDeleteIssueModalOpen ||
-      isDeleteIssueModalOpen
-  );
 
   const { setToastAlert } = useToast();
 
@@ -163,6 +152,7 @@ export const CommandPalette: FC = observer(() => {
       projectId,
       workspaceSlug,
       isAnyModalOpen,
+      setTrackElement,
     ]
   );
 
@@ -229,11 +219,15 @@ export const CommandPalette: FC = observer(() => {
         currentStore={createIssueStoreType}
       />
 
-      {issueId && issueDetails && (
+      {workspaceSlug && projectId && issueId && issueDetails && (
         <DeleteIssueModal
           handleClose={() => toggleDeleteIssueModal(false)}
           isOpen={isDeleteIssueModalOpen}
           data={issueDetails}
+          onSubmit={async () => {
+            await removeIssue(workspaceSlug.toString(), projectId.toString(), issueId.toString());
+            router.push(`/${workspaceSlug}/projects/${projectId}/issues`);
+          }}
         />
       )}
 

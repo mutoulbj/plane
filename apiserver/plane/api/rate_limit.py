@@ -1,9 +1,8 @@
-from django.utils import timezone
 from rest_framework.throttling import SimpleRateThrottle
-
 
 class ApiKeyRateThrottle(SimpleRateThrottle):
     scope = 'api_key'
+    rate = '60/minute'
 
     def get_cache_key(self, request, view):
         # Retrieve the API key from the request header
@@ -15,20 +14,17 @@ class ApiKeyRateThrottle(SimpleRateThrottle):
         return f'{self.scope}:{api_key}'
 
     def allow_request(self, request, view):
-        # Calculate the current time as a Unix timestamp
-        now = timezone.now().timestamp()
-
-        # Use the parent class's method to check if the request is allowed
         allowed = super().allow_request(request, view)
 
         if allowed:
+            now = self.timer()
             # Calculate the remaining limit and reset time
             history = self.cache.get(self.key, [])
 
             # Remove old histories
             while history and history[-1] <= now - self.duration:
                 history.pop()
-            
+
             # Calculate the requests
             num_requests = len(history)
 

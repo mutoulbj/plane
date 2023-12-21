@@ -24,7 +24,10 @@ interface ICycleDelete {
 export const CycleDeleteModal: React.FC<ICycleDelete> = observer((props) => {
   const { isOpen, handleClose, cycle, workspaceSlug, projectId } = props;
   // store
-  const { cycle: cycleStore, trackEvent: { postHogEventTracker } } = useMobxStore();
+  const {
+    cycle: cycleStore,
+    trackEvent: { postHogEventTracker },
+  } = useMobxStore();
   // toast
   const { setToastAlert } = useToast();
   // states
@@ -36,26 +39,23 @@ export const CycleDeleteModal: React.FC<ICycleDelete> = observer((props) => {
     setLoader(true);
     if (cycle?.id)
       try {
-        await cycleStore.removeCycle(workspaceSlug, projectId, cycle?.id).then((res) => {
-          setToastAlert({
-            type: "success",
-            title: "Success!",
-            message: "Cycle deleted successfully.",
+        await cycleStore
+          .removeCycle(workspaceSlug, projectId, cycle?.id)
+          .then(() => {
+            setToastAlert({
+              type: "success",
+              title: "Success!",
+              message: "Cycle deleted successfully.",
+            });
+            postHogEventTracker("CYCLE_DELETE", {
+              state: "SUCCESS",
+            });
+          })
+          .catch(() => {
+            postHogEventTracker("CYCLE_DELETE", {
+              state: "FAILED",
+            });
           });
-          postHogEventTracker(
-            "CYCLE_DELETE",
-            {
-              state: "SUCCESS"
-            }
-          );
-        }).catch((error) => {
-          postHogEventTracker(
-            "CYCLE_DELETE",
-            {
-              state: "FAILED"
-            }
-          );
-        });
 
         if (cycleId || peekCycle) router.push(`/${workspaceSlug}/projects/${projectId}/cycles`);
 
@@ -108,7 +108,7 @@ export const CycleDeleteModal: React.FC<ICycleDelete> = observer((props) => {
                   <Dialog.Panel className="relative transform overflow-hidden rounded-lg bg-custom-background-100 text-left shadow-custom-shadow-md transition-all sm:my-8 sm:w-full sm:max-w-2xl">
                     <div className="flex flex-col gap-6 p-6">
                       <div className="flex w-full items-center justify-start gap-4">
-                        <div className="flex-shrink-0 flex justify-center items-center rounded-full bg-red-500/20 w-12 h-12">
+                        <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-red-500/20">
                           <AlertTriangle width={16} strokeWidth={2} className="text-red-600" />
                         </div>
                         <div className="text-xl font-medium 2xl:text-2xl">Delete Cycle</div>

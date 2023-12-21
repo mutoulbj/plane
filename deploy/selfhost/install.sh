@@ -5,7 +5,7 @@ SCRIPT_DIR=$PWD
 PLANE_INSTALL_DIR=$PWD/plane-app
 
 function install(){
-    echo 
+    echo
     echo "Installing on $PLANE_INSTALL_DIR"
     download
 }
@@ -29,22 +29,17 @@ function download(){
 
     if [ "$BRANCH" != "master" ];
     then
-        cp $PLANE_INSTALL_DIR/docker-compose.yaml $PLANE_INSTALL_DIR/temp.yaml 
-
-        sed -e 's@plane-frontend:@plane-frontend-private:@g' \
-            -e 's@plane-space:@plane-space-private:@g' \
-            -e 's@plane-backend:@plane-backend-private:@g' \
-            -e 's@plane-proxy:@plane-proxy-private:@g' \
-            -e 's@${APP_RELEASE:-latest}@'"$BRANCH"'@g' \
+        cp $PLANE_INSTALL_DIR/docker-compose.yaml $PLANE_INSTALL_DIR/temp.yaml
+        sed -e 's@${APP_RELEASE:-latest}@'"$BRANCH"'@g' \
             $PLANE_INSTALL_DIR/temp.yaml > $PLANE_INSTALL_DIR/docker-compose.yaml
 
         rm $PLANE_INSTALL_DIR/temp.yaml
     fi
-    
+
     echo ""
     echo "Latest version is now available for you to use"
     echo ""
-    echo "In case of Upgrade, your new setting file is availabe as 'variables-upgrade.env'. Please compare and set the required values in '.env 'file."
+    echo "In case of Upgrade, your new setting file is available as 'variables-upgrade.env'. Please compare and set the required values in '.env 'file."
     echo ""
 
 }
@@ -83,7 +78,7 @@ function askForAction(){
     echo "   4) Restart"
     echo "   5) Upgrade"
     echo "   6) Exit"
-    echo 
+    echo
     read -p "Action [2]: " ACTION
     until [[ -z "$ACTION" || "$ACTION" =~ ^[1-6]$ ]]; do
         echo "$ACTION: invalid selection."
@@ -100,19 +95,19 @@ function askForAction(){
     then
         startServices
         askForAction
-    elif [ "$ACTION" == "3" ] 
+    elif [ "$ACTION" == "3" ]
     then
         stopServices
         askForAction
-    elif [ "$ACTION" == "4" ] 
+    elif [ "$ACTION" == "4" ]
     then
         restartServices
         askForAction
-    elif [ "$ACTION" == "5" ] 
+    elif [ "$ACTION" == "5" ]
     then
         upgrade
         askForAction
-    elif [ "$ACTION" == "6" ] 
+    elif [ "$ACTION" == "6" ]
     then
         exit 0
     else

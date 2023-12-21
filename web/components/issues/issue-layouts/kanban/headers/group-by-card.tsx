@@ -1,11 +1,9 @@
 import React, { FC } from "react";
 import { useRouter } from "next/router";
-// services
-import { ModuleService } from "services/module.service";
-import { IssueService } from "services/issue";
 // components
 import { CustomMenu } from "@plane/ui";
 import { CreateUpdateIssueModal } from "components/issues/modal";
+import { CreateUpdateDraftIssueModal } from "components/issues/draft-issue-modal";
 import { ExistingIssuesListModal } from "components/core";
 // lucide icons
 import { Minimize2, Maximize2, Circle, Plus } from "lucide-react";
@@ -29,10 +27,8 @@ interface IHeaderGroupByCard {
   issuePayload: Partial<IIssue>;
   disableIssueCreation?: boolean;
   currentStore?: EProjectStore;
+  addIssuesToView?: (issueIds: string[]) => Promise<IIssue>;
 }
-
-const moduleService = new ModuleService();
-const issueService = new IssueService();
 
 export const HeaderGroupByCard: FC<IHeaderGroupByCard> = observer((props) => {
   const {
@@ -46,6 +42,7 @@ export const HeaderGroupByCard: FC<IHeaderGroupByCard> = observer((props) => {
     issuePayload,
     disableIssueCreation,
     currentStore,
+    addIssuesToView,
   } = props;
   const verticalAlignPosition = kanBanToggle?.groupByHeaderMinMax.includes(column_id);
 
@@ -55,39 +52,20 @@ export const HeaderGroupByCard: FC<IHeaderGroupByCard> = observer((props) => {
   const router = useRouter();
   const { workspaceSlug, projectId, moduleId, cycleId } = router.query;
 
+  const isDraftIssue = router.pathname.includes("draft-issue");
+
   const { setToastAlert } = useToast();
 
   const renderExistingIssueModal = moduleId || cycleId;
   const ExistingIssuesListModalPayload = moduleId ? { module: true } : { cycle: true };
 
-  const handleAddIssuesToModule = async (data: ISearchIssueResponse[]) => {
+  const handleAddIssuesToView = async (data: ISearchIssueResponse[]) => {
     if (!workspaceSlug || !projectId) return;
 
-    const payload = {
-      issues: data.map((i) => i.id),
-    };
+    const issues = data.map((i) => i.id);
 
-    await moduleService
-      .addIssuesToModule(workspaceSlug as string, projectId as string, moduleId as string, payload)
-      .catch(() =>
-        setToastAlert({
-          type: "error",
-          title: "Error!",
-          message: "Selected issues could not be added to the module. Please try again.",
-        })
-      );
-  };
-
-  const handleAddIssuesToCycle = async (data: ISearchIssueResponse[]) => {
-    if (!workspaceSlug || !projectId) return;
-
-    const payload = {
-      issues: data.map((i) => i.id),
-    };
-
-    await issueService
-      .addIssueToCycle(workspaceSlug as string, projectId as string, cycleId as string, payload)
-      .catch(() => {
+    addIssuesToView &&
+      addIssuesToView(issues)?.catch(() => {
         setToastAlert({
           type: "error",
           title: "Error!",
@@ -98,32 +76,41 @@ export const HeaderGroupByCard: FC<IHeaderGroupByCard> = observer((props) => {
 
   return (
     <>
-      <CreateUpdateIssueModal
-        isOpen={isOpen}
-        handleClose={() => setIsOpen(false)}
-        prePopulateData={issuePayload}
-        currentStore={currentStore}
-      />
+      {isDraftIssue ? (
+        <CreateUpdateDraftIssueModal
+          isOpen={isOpen}
+          handleClose={() => setIsOpen(false)}
+          prePopulateData={issuePayload}
+          fieldsToShow={["all"]}
+        />
+      ) : (
+        <CreateUpdateIssueModal
+          isOpen={isOpen}
+          handleClose={() => setIsOpen(false)}
+          prePopulateData={issuePayload}
+          currentStore={currentStore}
+        />
+      )}
       {renderExistingIssueModal && (
         <ExistingIssuesListModal
           isOpen={openExistingIssueListModal}
           handleClose={() => setOpenExistingIssueListModal(false)}
           searchParams={ExistingIssuesListModalPayload}
-          handleOnSubmit={moduleId ? handleAddIssuesToModule : handleAddIssuesToCycle}
+          handleOnSubmit={handleAddIssuesToView}
         />
       )}
       <div
-        className={`flex-shrink-0 relative flex gap-2 p-1.5 ${
-          verticalAlignPosition ? `flex-col items-center w-[44px]` : `flex-row items-center w-full`
+        className={`relative flex flex-shrink-0 gap-2 p-1.5 ${
+          verticalAlignPosition ? `w-[44px] flex-col items-center` : `w-full flex-row items-center`
         }`}
       >
-        <div className="flex-shrink-0 w-[20px] h-[20px] rounded-sm overflow-hidden flex justify-center items-center">
+        <div className="flex h-[20px] w-[20px] flex-shrink-0 items-center justify-center overflow-hidden rounded-sm">
           {icon ? icon : <Circle width={14} strokeWidth={2} />}
         </div>
 
-        <div className={`flex items-center gap-1 ${verticalAlignPosition ? `flex-col` : `flex-row w-full`}`}>
+        <div className={`flex items-center gap-1 ${verticalAlignPosition ? `flex-col` : `w-full flex-row`}`}>
           <div
-            className={`font-medium line-clamp-1 text-custom-text-100 ${verticalAlignPosition ? `vertical-lr` : ``}`}
+            className={`line-clamp-1 font-medium text-custom-text-100 ${verticalAlignPosition ? `vertical-lr` : ``}`}
           >
             {title}
           </div>
@@ -134,7 +121,7 @@ export const HeaderGroupByCard: FC<IHeaderGroupByCard> = observer((props) => {
 
         {sub_group_by === null && (
           <div
-            className="flex-shrink-0 w-[20px] h-[20px] rounded-sm overflow-hidden flex justify-center items-center hover:bg-custom-background-80 cursor-pointer transition-all"
+            className="flex h-[20px] w-[20px] flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-sm transition-all hover:bg-custom-background-80"
             onClick={() => handleKanBanToggle("groupByHeaderMinMax", column_id)}
           >
             {verticalAlignPosition ? (
@@ -150,7 +137,7 @@ export const HeaderGroupByCard: FC<IHeaderGroupByCard> = observer((props) => {
             <CustomMenu
               width="auto"
               customButton={
-                <span className="flex-shrink-0 w-[20px] h-[20px] rounded-sm overflow-hidden flex justify-center items-center hover:bg-custom-background-80 cursor-pointer transition-all">
+                <span className="flex h-[20px] w-[20px] flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-sm transition-all hover:bg-custom-background-80">
                   <Plus height={14} width={14} strokeWidth={2} />
                 </span>
               }
@@ -164,7 +151,7 @@ export const HeaderGroupByCard: FC<IHeaderGroupByCard> = observer((props) => {
             </CustomMenu>
           ) : (
             <div
-              className="flex-shrink-0 w-[20px] h-[20px] rounded-sm overflow-hidden flex justify-center items-center hover:bg-custom-background-80 cursor-pointer transition-all"
+              className="flex h-[20px] w-[20px] flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-sm transition-all hover:bg-custom-background-80"
               onClick={() => setIsOpen(true)}
             >
               <Plus width={14} strokeWidth={2} />

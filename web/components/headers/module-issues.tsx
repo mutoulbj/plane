@@ -11,7 +11,7 @@ import { ProjectAnalyticsModal } from "components/analytics";
 // ui
 import { Breadcrumbs, Button, CustomMenu, DiceIcon } from "@plane/ui";
 // icons
-import { ArrowRight, ContrastIcon, Plus } from "lucide-react";
+import { ArrowRight, Plus } from "lucide-react";
 // helpers
 import { truncateText } from "helpers/string.helper";
 import { renderEmoji } from "helpers/emoji.helper";
@@ -21,6 +21,7 @@ import { IIssueDisplayFilterOptions, IIssueDisplayProperties, IIssueFilterOption
 import { ISSUE_DISPLAY_FILTERS_BY_LAYOUT } from "constants/issue";
 import { EFilterType } from "store/issues/types";
 import { EProjectStore } from "store/command-palette.store";
+import { EUserWorkspaceRoles } from "constants/workspace";
 
 export const ModuleIssuesHeader: React.FC = observer(() => {
   const [analyticsModal, setAnalyticsModal] = useState(false);
@@ -41,6 +42,7 @@ export const ModuleIssuesHeader: React.FC = observer(() => {
     trackEvent: { setTrackElement },
     projectLabel: { projectLabels },
     moduleIssuesFilter: { issueFilters, updateFilters },
+    user: { currentProjectRole },
   } = useMobxStore();
 
   const { currentProjectDetails } = projectStore;
@@ -100,6 +102,9 @@ export const ModuleIssuesHeader: React.FC = observer(() => {
   const modulesList = projectId ? moduleStore.modules[projectId.toString()] : undefined;
   const moduleDetails = moduleId ? moduleStore.getModuleById(moduleId.toString()) : undefined;
 
+  const canUserCreateIssue =
+    currentProjectRole && [EUserWorkspaceRoles.ADMIN, EUserWorkspaceRoles.MEMBER].includes(currentProjectRole);
+
   return (
     <>
       <ProjectAnalyticsModal
@@ -107,7 +112,7 @@ export const ModuleIssuesHeader: React.FC = observer(() => {
         onClose={() => setAnalyticsModal(false)}
         moduleDetails={moduleDetails ?? undefined}
       />
-      <div className="relative w-full flex items-center z-10 h-[3.75rem] justify-between gap-x-2 gap-y-4 border-b border-custom-border-200 bg-custom-sidebar-background-100 p-4">
+      <div className="relative z-10 flex h-[3.75rem] w-full items-center justify-between gap-x-2 gap-y-4 border-b border-custom-border-200 bg-custom-sidebar-background-100 p-4">
         <div className="flex items-center gap-2">
           <Breadcrumbs>
             <Breadcrumbs.BreadcrumbItem
@@ -138,7 +143,7 @@ export const ModuleIssuesHeader: React.FC = observer(() => {
                 <CustomMenu
                   label={
                     <>
-                      <ContrastIcon className="h-3 w-3" />
+                      <DiceIcon className="h-3 w-3" />
                       {moduleDetails?.name && truncateText(moduleDetails.name, 40)}
                     </>
                   }
@@ -151,7 +156,10 @@ export const ModuleIssuesHeader: React.FC = observer(() => {
                       key={module.id}
                       onClick={() => router.push(`/${workspaceSlug}/projects/${projectId}/modules/${module.id}`)}
                     >
-                      {truncateText(module.name, 40)}
+                      <div className="flex items-center gap-1.5">
+                        <DiceIcon className="h-3 w-3" />
+                        {truncateText(module.name, 40)}
+                      </div>
                     </CustomMenu.MenuItem>
                   ))}
                 </CustomMenu>
@@ -188,19 +196,24 @@ export const ModuleIssuesHeader: React.FC = observer(() => {
               handleDisplayPropertiesUpdate={handleDisplayProperties}
             />
           </FiltersDropdown>
-          <Button onClick={() => setAnalyticsModal(true)} variant="neutral-primary" size="sm">
-            Analytics
-          </Button>
-          <Button
-            onClick={() => {
-              setTrackElement("MODULE_PAGE_HEADER");
-              commandPaletteStore.toggleCreateIssueModal(true, EProjectStore.MODULE);
-            }}
-            size="sm"
-            prependIcon={<Plus />}
-          >
-            Add Issue
-          </Button>
+
+          {canUserCreateIssue && (
+            <>
+              <Button onClick={() => setAnalyticsModal(true)} variant="neutral-primary" size="sm">
+                Analytics
+              </Button>
+              <Button
+                onClick={() => {
+                  setTrackElement("MODULE_PAGE_HEADER");
+                  commandPaletteStore.toggleCreateIssueModal(true, EProjectStore.MODULE);
+                }}
+                size="sm"
+                prependIcon={<Plus />}
+              >
+                Add Issue
+              </Button>
+            </>
+          )}
           <button
             type="button"
             className="grid h-7 w-7 place-items-center rounded p-1 outline-none hover:bg-custom-sidebar-background-80"

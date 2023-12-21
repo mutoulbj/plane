@@ -171,10 +171,10 @@ export const getFetchKeysForIssueMutation = (options: {
   const ganttFetchKey = cycleId
     ? { ganttFetchKey: CYCLE_ISSUES_WITH_PARAMS(cycleId.toString(), ganttParams) }
     : moduleId
-    ? { ganttFetchKey: MODULE_ISSUES_WITH_PARAMS(moduleId.toString(), ganttParams) }
-    : viewId
-    ? { ganttFetchKey: VIEW_ISSUES(viewId.toString(), viewGanttParams) }
-    : { ganttFetchKey: PROJECT_ISSUES_LIST_WITH_PARAMS(projectId?.toString() ?? "", ganttParams) };
+      ? { ganttFetchKey: MODULE_ISSUES_WITH_PARAMS(moduleId.toString(), ganttParams) }
+      : viewId
+        ? { ganttFetchKey: VIEW_ISSUES(viewId.toString(), viewGanttParams) }
+        : { ganttFetchKey: PROJECT_ISSUES_LIST_WITH_PARAMS(projectId?.toString() ?? "", ganttParams) };
 
   return {
     ...ganttFetchKey,
@@ -205,4 +205,22 @@ export const substringMatch = (text: string, searchQuery: string): boolean => {
   } catch (error) {
     return false;
   }
+};
+
+/**
+ * @returns {boolean} true if email is valid, false otherwise
+ * @description Returns true if email is valid, false otherwise
+ * @param {string} email string to check if it is a valid email
+ * @example checkEmailIsValid("hello world") => false
+ * @example checkEmailIsValid("example@plane.so") => true
+ */
+export const checkEmailValidity = (email: string): boolean => {
+  if (!email) return false;
+
+  const isEmailValid =
+    /^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/.test(
+      email
+    );
+
+  return isEmailValid;
 };

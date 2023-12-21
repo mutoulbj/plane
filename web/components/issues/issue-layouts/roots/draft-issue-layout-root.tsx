@@ -11,7 +11,7 @@ import { DraftKanBanLayout } from "../kanban/roots/draft-issue-root";
 
 export const DraftIssueLayoutRoot: React.FC = observer(() => {
   const router = useRouter();
-  const { workspaceSlug, projectId } = router.query as { workspaceSlug: string; projectId: string };
+  const { workspaceSlug, projectId } = router.query;
 
   const {
     projectDraftIssuesFilter: { issueFilters, fetchFilters },
@@ -20,24 +20,24 @@ export const DraftIssueLayoutRoot: React.FC = observer(() => {
 
   useSWR(workspaceSlug && projectId ? `DRAFT_FILTERS_AND_ISSUES_${projectId.toString()}` : null, async () => {
     if (workspaceSlug && projectId) {
-      await fetchFilters(workspaceSlug, projectId);
-      await fetchIssues(workspaceSlug, projectId, getIssues ? "mutation" : "init-loader");
+      await fetchFilters(workspaceSlug.toString(), projectId.toString());
+      await fetchIssues(workspaceSlug.toString(), projectId.toString(), getIssues ? "mutation" : "init-loader");
     }
   });
 
   const activeLayout = issueFilters?.displayFilters?.layout || undefined;
 
   return (
-    <div className="relative w-full h-full flex flex-col overflow-hidden">
+    <div className="relative flex h-full w-full flex-col overflow-hidden">
       <DraftIssueAppliedFiltersRoot />
 
       {loader === "init-loader" ? (
-        <div className="w-full h-full flex justify-center items-center">
+        <div className="flex h-full w-full items-center justify-center">
           <Spinner />
         </div>
       ) : (
         <>
-          <div className="w-full h-full relative overflow-auto">
+          <div className="relative h-full w-full overflow-auto">
             {activeLayout === "list" ? (
               <DraftIssueListLayout />
             ) : activeLayout === "kanban" ? (
