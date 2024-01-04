@@ -27,6 +27,7 @@
     "@plane/rich-text-editor": "*",
     "@plane/document-editor": "*",
     "@plane/ui": "*",
+    "@plane/types": "*",
     "@popperjs/core": "^2.11.8",
     "@sentry/nextjs": "^7.85.0",
     "axios": "^1.1.3",
