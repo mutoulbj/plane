@@ -15,7 +15,9 @@ class Page(ProjectBaseModel):
     description_html = models.TextField(blank=True, default="<p></p>")
     description_stripped = models.TextField(blank=True, null=True)
     owned_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="pages"
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="pages",
     )
     access = models.PositiveSmallIntegerField(
         choices=((0, "Public"), (1, "Private")), default=0
@@ -53,7 +55,7 @@ class PageLog(ProjectBaseModel):
         ("video", "Video"),
         ("file", "File"),
         ("link", "Link"),
-        ("cycle","Cycle"),
+        ("cycle", "Cycle"),
         ("module", "Module"),
         ("back_link", "Back Link"),
         ("forward_link", "Forward Link"),
@@ -83,7 +85,9 @@ class PageLog(ProjectBaseModel):
 
 
 class PageBlock(ProjectBaseModel):
-    page = models.ForeignKey("db.Page", on_delete=models.CASCADE, related_name="blocks")
+    page = models.ForeignKey(
+        "db.Page", on_delete=models.CASCADE, related_name="blocks"
+    )
     name = models.CharField(max_length=255)
     description = models.JSONField(default=dict, blank=True)
     description_html = models.TextField(blank=True, default="<p></p>")
@@ -118,7 +122,9 @@ class PageBlock(ProjectBaseModel):
                     group="completed", project=self.project
                 ).first()
                 if completed_state is not None:
-                    Issue.objects.update(pk=self.issue_id, state=completed_state)
+                    Issue.objects.update(
+                        pk=self.issue_id, state=completed_state
+                    )
             except ImportError:
                 pass
         super(PageBlock, self).save(*args, **kwargs)

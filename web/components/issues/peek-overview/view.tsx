@@ -2,6 +2,8 @@ import { FC, useRef, useState } from "react";
 import { observer } from "mobx-react-lite";
 import { MoveRight, MoveDiagonal, Bell, Link2, Trash2 } from "lucide-react";
 // hooks
+import useOutsideClickDetector from "hooks/use-outside-click-detector";
+// store hooks
 import { useIssueDetail, useUser } from "hooks/store";
 // components
 import {
@@ -15,19 +17,24 @@ import {
 // ui
 import { Button, CenterPanelIcon, CustomSelect, FullScreenPanelIcon, SidePanelIcon, Spinner } from "@plane/ui";
 // types
-import { TIssue, IIssueLink, ILinkDetails } from "@plane/types";
-import useOutsideClickDetector from "hooks/use-outside-click-detector";
+import { TIssue } from "@plane/types";
 
 interface IIssueView {
   workspaceSlug: string;
   projectId: string;
   issueId: string;
-  issue: TIssue | undefined;
+
   isLoading?: boolean;
   isArchived?: boolean;
+
+  issue: TIssue | undefined;
+
   handleCopyText: (e: React.MouseEvent<HTMLButtonElement>) => void;
   redirectToIssueDetail: () => void;
+
   issueUpdate: (issue: Partial<TIssue>) => void;
+  issueDelete: () => Promise<void>;
+
   issueReactionCreate: (reaction: string) => void;
   issueReactionRemove: (reaction: string) => void;
   issueCommentCreate: (comment: any) => void;
@@ -37,12 +44,11 @@ interface IIssueView {
   issueCommentReactionRemove: (commentId: string, reaction: string) => void;
   issueSubscriptionCreate: () => void;
   issueSubscriptionRemove: () => void;
-  issueLinkCreate: (formData: IIssueLink) => Promise<ILinkDetails>;
-  issueLinkUpdate: (formData: IIssueLink, linkId: string) => Promise<ILinkDetails>;
-  issueLinkDelete: (linkId: string) => Promise<void>;
-  handleDeleteIssue: () => Promise<void>;
+
   disableUserActions?: boolean;
   showCommentAccessSpecifier?: boolean;
+
+  issueOperations: any;
 }
 
 type TPeekModes = "side-peek" | "modal" | "full-screen";
@@ -75,6 +81,7 @@ export const IssueView: FC<IIssueView> = observer((props) => {
     isArchived,
     handleCopyText,
     redirectToIssueDetail,
+
     issueUpdate,
     issueReactionCreate,
     issueReactionRemove,
@@ -85,12 +92,12 @@ export const IssueView: FC<IIssueView> = observer((props) => {
     issueCommentReactionRemove,
     issueSubscriptionCreate,
     issueSubscriptionRemove,
-    issueLinkCreate,
-    issueLinkUpdate,
-    issueLinkDelete,
-    handleDeleteIssue,
+
+    issueDelete,
     disableUserActions = false,
     showCommentAccessSpecifier = false,
+
+    issueOperations,
   } = props;
   // states
   const [peekMode, setPeekMode] = useState<TPeekModes>("side-peek");
@@ -109,7 +116,9 @@ export const IssueView: FC<IIssueView> = observer((props) => {
   } = useIssueDetail();
   const { currentUser } = useUser();
 
-  const removeRoutePeekId = () => setPeekIssue(undefined);
+  const removeRoutePeekId = () => {
+    setPeekIssue(undefined);
+  };
 
   const issueReactions = reaction.getReactionsByIssueId(issueId) || [];
   const issueActivity = activity.getActivitiesByIssueId(issueId);
@@ -126,7 +135,7 @@ export const IssueView: FC<IIssueView> = observer((props) => {
           isOpen={isDeleteIssueModalOpen}
           handleClose={() => toggleDeleteIssueModal(false)}
           data={issue}
-          onSubmit={handleDeleteIssue}
+          onSubmit={issueDelete}
         />
       )}
 
@@ -135,7 +144,7 @@ export const IssueView: FC<IIssueView> = observer((props) => {
           data={issue}
           isOpen={isDeleteIssueModalOpen}
           handleClose={() => toggleDeleteIssueModal(false)}
-          onSubmit={handleDeleteIssue}
+          onSubmit={issueDelete}
         />
       )}
 
@@ -257,10 +266,8 @@ export const IssueView: FC<IIssueView> = observer((props) => {
                         <PeekOverviewProperties
                           issue={issue}
                           issueUpdate={issueUpdate}
-                          issueLinkCreate={issueLinkCreate}
-                          issueLinkUpdate={issueLinkUpdate}
-                          issueLinkDelete={issueLinkDelete}
                           disableUserActions={disableUserActions}
+                          issueOperations={issueOperations}
                         />
 
                         <IssueActivity
@@ -316,10 +323,8 @@ export const IssueView: FC<IIssueView> = observer((props) => {
                           <PeekOverviewProperties
                             issue={issue}
                             issueUpdate={issueUpdate}
-                            issueLinkCreate={issueLinkCreate}
-                            issueLinkUpdate={issueLinkUpdate}
-                            issueLinkDelete={issueLinkDelete}
                             disableUserActions={disableUserActions}
+                            issueOperations={issueOperations}
                           />
                         </div>
                       </div>
