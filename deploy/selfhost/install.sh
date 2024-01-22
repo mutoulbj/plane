@@ -3,10 +3,6 @@
 BRANCH=master
 SCRIPT_DIR=$PWD
 PLANE_INSTALL_DIR=$PWD/plane-app
-
-function install(){
-    echo
-    echo "Installing on $PLANE_INSTALL_DIR"
 export APP_RELEASE=$BRANCH
 export DOCKERHUB_USER=makeplane
 export PULL_POLICY=always
@@ -101,7 +97,6 @@ function download() {
 
         rm $PLANE_INSTALL_DIR/temp.yaml
     fi
-
 
     if [ $USE_GLOBAL_IMAGES == 0 ]; then
         local res=$(buildLocalImage)

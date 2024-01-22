@@ -11,7 +11,6 @@ from rest_framework import serializers
 from .base import DynamicBaseSerializer
 from plane.db.models import Webhook, WebhookLog
 from plane.db.models.webhook import validate_domain, validate_schema
-from plane.db.models.webhook import validate_domain, validate_schema
 
 
 class WebhookSerializer(DynamicBaseSerializer):

@@ -39,7 +39,6 @@ from plane.app.serializers import (
 from plane.app.permissions import (
     ProjectEntityPermission,
     ProjectLitePermission,
-    WorkspaceUserPermission
 )
 from plane.db.models import (
     User,
@@ -1024,7 +1023,7 @@ class ActiveCycleEndpoint(BaseAPIView):
             cycle["issues"] = IssueSerializer(priority_issues, many=True).data
 
         return results
-    
+
     def get(self, request, slug):
         subquery = CycleFavorite.objects.filter(
             user=self.request.user,
@@ -1154,7 +1153,7 @@ class ActiveCycleEndpoint(BaseAPIView):
             )
             .order_by("-created_at")
         )
-        
+
         return self.paginate(
             request=request,
             queryset=active_cycles,

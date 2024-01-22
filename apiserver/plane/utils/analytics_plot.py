@@ -12,7 +12,6 @@ from django.db.models.functions import (
     ExtractYear,
     Concat,
 )
-from django.utils import timezone
 
 # Module imports
 from plane.db.models import Issue

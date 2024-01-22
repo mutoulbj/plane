@@ -67,8 +67,6 @@ class IssueSerializer(BaseSerializer):
             and data.get("target_date", None) is not None
             and data.get("start_date", None) > data.get("target_date", None)
         ):
-            raise serializers.ValidationError("Start date cannot exceed target date")
-
             raise serializers.ValidationError(
                 "Start date cannot exceed target date"
             )
