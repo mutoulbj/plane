@@ -62,6 +62,7 @@ from .cycle import (
     CycleFavoriteViewSet,
     TransferCycleIssueEndpoint,
     CycleUserPropertiesEndpoint,
+    ActiveCycleEndpoint,
 )
 from .asset import FileAssetEndpoint, UserAssetsEndpoint, FileAssetViewSet
 from .issue import (
@@ -175,4 +176,9 @@ from .webhook import (
     WebhookEndpoint,
     WebhookLogsEndpoint,
     WebhookSecretRegenerateEndpoint,
+)
+
+from .dashboard import (
+    DashboardEndpoint,
+    WidgetsEndpoint
 )

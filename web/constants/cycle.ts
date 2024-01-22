@@ -86,3 +86,26 @@ export const CYCLE_STATUS: {
     bgColor: "bg-custom-background-90",
   },
 ];
+
+export const STATE_GROUPS_DETAILS = [
+  {
+    key: "completed_issues",
+    title: "Completed",
+    color: "#46A758",
+  },
+  {
+    key: "started_issues",
+    title: "Started",
+    color: "#FFC53D",
+  },
+  {
+    key: "unstarted_issues",
+    title: "Unstarted",
+    color: "#FB923C",
+  },
+  {
+    key: "backlog_issues",
+    title: "Backlog",
+    color: "#F0F0F3",
+  },
+];

@@ -43,7 +43,7 @@ export interface IBaseKanBanLayout {
   };
   showLoader?: boolean;
   viewId?: string;
-  currentStore?: TCreateModalStoreTypes;
+  storeType?: TCreateModalStoreTypes;
   addIssuesToView?: (issueIds: string[]) => Promise<TIssue>;
   canEditPropertiesBasedOnProject?: (projectId: string) => boolean;
 }
@@ -62,7 +62,7 @@ export const BaseKanBanRoot: React.FC<IBaseKanBanLayout> = observer((props: IBas
     issueActions,
     showLoader,
     viewId,
-    currentStore,
+    storeType,
     addIssuesToView,
     canEditPropertiesBasedOnProject,
   } = props;
@@ -202,6 +202,7 @@ export const BaseKanBanRoot: React.FC<IBaseKanBanLayout> = observer((props: IBas
       issueIds,
       viewId
     ).finally(() => {
+      handleIssues(issueMap[dragState.draggedIssueId!], EIssueActions.DELETE);
       setDeleteIssueModal(false);
       setDragState({});
     });
@@ -276,7 +277,7 @@ export const BaseKanBanRoot: React.FC<IBaseKanBanLayout> = observer((props: IBas
             viewId={viewId}
             disableIssueCreation={!enableIssueCreation || !isEditingAllowed}
             canEditProperties={canEditProperties}
-            currentStore={currentStore}
+            storeType={storeType}
             addIssuesToView={addIssuesToView}
           />
         </DragDropContext>
