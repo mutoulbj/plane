@@ -184,6 +184,17 @@ class Issue(ProjectBaseModel):
                     self.state = default_state
             except ImportError:
                 pass
+        else:
+            try:
+                from plane.db.models import State
+
+                # Check if the current issue state group is completed or not
+                if self.state.group == "completed":
+                    self.completed_at = timezone.now()
+                else:
+                    self.completed_at = None
+            except ImportError:
+                pass
 
         if self._state.adding:
             # Get the maximum display_id value from the database

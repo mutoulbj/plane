@@ -4,6 +4,7 @@ from datetime import timedelta
 
 # Django import
 from django.db import models
+from django.utils import timezone
 from django.db.models.functions import TruncDate
 from django.db.models import Count, F, Sum, Value, Case, When, CharField
 from django.db.models.functions import (

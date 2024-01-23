@@ -14,6 +14,7 @@ export const LinearProgressIndicator: React.FC<Props> = ({ data, noTooltip = fal
 
   const bars = data.map((item: any, index: Number) => {
     const width = `${(item.value / total) * 100}%`;
+    if (width === "0%") return <></>;
     const style = {
       width,
       backgroundColor: item.color,
@@ -27,8 +28,8 @@ export const LinearProgressIndicator: React.FC<Props> = ({ data, noTooltip = fal
     if (width === "0%") return <></>;
     else
       return (
-        <Tooltip key={item.id} tooltipContent={`${item.name} ${Math.round(item.value)}${inPercentage ? "%" : ""}`}>
-          <div style={style} />
+        <Tooltip key={item.id} tooltipContent={`${item.name} ${Math.round(item.value)}%`}>
+          <div style={style} className="first:rounded-l-full last:rounded-r-full" />
         </Tooltip>
       );
   });

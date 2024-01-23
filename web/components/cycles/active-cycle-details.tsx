@@ -31,36 +31,8 @@ import { truncateText } from "helpers/string.helper";
 import { ICycle, TCycleGroups } from "@plane/types";
 // constants
 import { EIssuesStoreType } from "constants/issue";
-import { ACTIVE_CYCLE_ISSUES } from "store/issue/cycle";
 import { CYCLE_ISSUES_WITH_PARAMS } from "constants/fetch-keys";
-
-const stateGroups = [
-  {
-    key: "backlog_issues",
-    title: "Backlog",
-    color: "#dee2e6",
-  },
-  {
-    key: "unstarted_issues",
-    title: "Unstarted",
-    color: "#26b5ce",
-  },
-  {
-    key: "started_issues",
-    title: "Started",
-    color: "#f7ae59",
-  },
-  {
-    key: "cancelled_issues",
-    title: "Cancelled",
-    color: "#d687ff",
-  },
-  {
-    key: "completed_issues",
-    title: "Completed",
-    color: "#09a953",
-  },
-];
+import { CYCLE_STATE_GROUPS_DETAILS } from "constants/cycle";
 
 interface IActiveCycleDetails {
   workspaceSlug: string;
@@ -72,8 +44,7 @@ export const ActiveCycleDetails: React.FC<IActiveCycleDetails> = observer((props
   const { workspaceSlug, projectId } = props;
   // store hooks
   const {
-    issues: { issues, fetchActiveCycleIssues },
-    issueMap,
+    issues: { fetchActiveCycleIssues },
   } = useIssues(EIssuesStoreType.CYCLE);
   const {
     commandPalette: { toggleCreateCycleModal },
@@ -95,9 +66,8 @@ export const ActiveCycleDetails: React.FC<IActiveCycleDetails> = observer((props
   );
 
   const activeCycle = currentProjectActiveCycleId ? getActiveCycleById(currentProjectActiveCycleId) : null;
-  const issueIds = issues?.[ACTIVE_CYCLE_ISSUES];
 
-  useSWR(
+  const { data: activeCycleIssues } = useSWR(
     workspaceSlug && projectId && currentProjectActiveCycleId
       ? CYCLE_ISSUES_WITH_PARAMS(currentProjectActiveCycleId, { priority: "urgent,high" })
       : null,
@@ -176,7 +146,7 @@ export const ActiveCycleDetails: React.FC<IActiveCycleDetails> = observer((props
     });
   };
 
-  const progressIndicatorData = STATE_GROUPS_DETAILS.map((group, index) => ({
+  const progressIndicatorData = CYCLE_STATE_GROUPS_DETAILS.map((group, index) => ({
     id: index,
     name: group.title,
     value:
@@ -205,7 +175,7 @@ export const ActiveCycleDetails: React.FC<IActiveCycleDetails> = observer((props
                 </span>
                 <span className="flex items-center gap-1 capitalize">
                   <span className="flex gap-1 whitespace-nowrap rounded-sm text-sm px-3 py-0.5 bg-amber-500/10 text-amber-500">
-                    {`${daysLeft} ${daysLeft > 1 ? "Days" : "Day"} Left`}
+                    {`${daysLeft} ${daysLeft > 1 ? "days" : "day"} left`}
                   </span>
                   {activeCycle.is_favorite ? (
                     <button
@@ -303,7 +273,7 @@ export const ActiveCycleDetails: React.FC<IActiveCycleDetails> = observer((props
                         <span
                           className="block h-3 w-3 rounded-full "
                           style={{
-                            backgroundColor: STATE_GROUPS_DETAILS[index].color,
+                            backgroundColor: CYCLE_STATE_GROUPS_DETAILS[index].color,
                           }}
                         />
                         <span className="text-xs capitalize">{group}</span>
@@ -322,107 +292,66 @@ export const ActiveCycleDetails: React.FC<IActiveCycleDetails> = observer((props
         </div>
       </div>
       <div className="grid grid-cols-1 divide-y border-custom-border-200 lg:grid-cols-2 lg:divide-x lg:divide-y-0">
-        <div className="flex flex-col justify-between p-4">
-          <div>
-            <div className="text-custom-primary">High Priority Issues</div>
-            <div className="my-3 flex max-h-[240px] min-h-[240px] flex-col gap-2.5 overflow-y-scroll rounded-md">
-              {issueIds ? (
-                issueIds.length > 0 ? (
-                  issueIds.map((issue: any) => (
-                    <Link
-                      key={issue.id}
-                      href={`/${workspaceSlug}/projects/${projectId}/issues/${issue.id}`}
-                      className="flex cursor-pointer flex-wrap items-center justify-between gap-2 rounded-md border border-custom-border-200 bg-custom-background-90 px-3 py-1.5"
-                    >
-                      <div className="flex flex-col gap-1">
-                        <div>
-                          <Tooltip
-                            tooltipHeading="Issue ID"
-                            tooltipContent={`${issue.project_detail?.identifier}-${issue.sequence_id}`}
-                          >
-                            <span className="flex-shrink-0 text-xs text-custom-text-200">
-                              {issue.project_detail?.identifier}-{issue.sequence_id}
-                            </span>
-                          </Tooltip>
-                        </div>
-                        <Tooltip position="top-left" tooltipHeading="Title" tooltipContent={issue.name}>
-                          <span className="text-[0.825rem] text-custom-text-100">{truncateText(issue.name, 30)}</span>
-                        </Tooltip>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <div
-                          className={`grid h-6 w-6 flex-shrink-0 place-items-center items-center rounded border shadow-sm ${
-                            issue.priority === "urgent"
-                              ? "border-red-500/20 bg-red-500/20 text-red-500"
-                              : "border-orange-500/20 bg-orange-500/20 text-orange-500"
-                          }`}
-                        >
-                          <PriorityIcon priority={issue.priority} className="text-sm" />
-                        </div>
-                        <ViewIssueLabel labelDetails={issue.label_details} maxRender={2} />
-                        <div className={`flex items-center gap-2 text-custom-text-200`}>
-                          {issue.assignees && issue.assignees.length > 0 && Array.isArray(issue.assignees) ? (
-                            <div className="-my-0.5 flex items-center justify-center gap-2">
-                              <AvatarGroup showTooltip={false}>
-                                {issue.assignee_details.map((assignee: any) => (
-                                  <Avatar key={assignee.id} name={assignee.display_name} src={assignee.avatar} />
-                                ))}
-                              </AvatarGroup>
-                            </div>
-                          ) : (
-                            ""
-                          )}
-                        </div>
-                      </div>
-                    </Link>
-                  ))
-                ) : (
-                  <div className="grid place-items-center text-center text-sm text-custom-text-200">
-                    No issues present in the cycle.
-                  </div>
-                )
-              ) : (
-                <Loader className="space-y-3">
-                  <Loader.Item height="50px" />
-                  <Loader.Item height="50px" />
-                  <Loader.Item height="50px" />
-                </Loader>
-              )}
-            </div>
-          </div>
+        <div className="flex flex-col gap-3 p-4 max-h-60 overflow-hidden">
+          <div className="text-custom-primary">High Priority Issues</div>
+          <div className="flex flex-col h-full gap-2.5 overflow-y-scroll rounded-md">
+            {activeCycleIssues ? (
+              activeCycleIssues.length > 0 ? (
+                activeCycleIssues.map((issue: any) => (
+                  <Link
+                    key={issue.id}
+                    href={`/${workspaceSlug}/projects/${projectId}/issues/${issue.id}`}
+                    className="flex cursor-pointer flex-wrap items-center justify-between gap-2 rounded-md border border-custom-border-200  px-3 py-1.5"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <PriorityIcon priority={issue.priority} withContainer size={12} />
 
-          {issueIds && issueIds.length > 0 && (
-            <div className="flex items-center justify-between gap-2">
-              <div className="h-1 w-full rounded-full bg-custom-background-80">
-                <div
-                  className="h-1 rounded-full bg-green-600"
-                  style={{
-                    width:
-                      issueIds &&
-                      `${
-                        (issueIds.filter((issue: any) => issue?.state_detail?.group === "completed")?.length /
-                          issueIds.length) *
-                          100 ?? 0
-                      }%`,
-                  }}
-                />
-              </div>
-              <div className="w-16 text-end text-xs text-custom-text-200">
-                of{" "}
-                {
-                  issueIds?.filter(
-                    (issueId) =>
-                      getProjectStates(issueMap[issueId]?.project_id)?.find(
-                        (issue) => issue.id === issueMap[issueId]?.state_id
-                      )?.group === "completed"
-                  )?.length
-                }{" "}
-                of {issueIds?.length}
-              </div>
-            </div>
-          )}
+                      <Tooltip
+                        tooltipHeading="Issue ID"
+                        tooltipContent={`${currentProjectDetails?.identifier}-${issue.sequence_id}`}
+                      >
+                        <span className="flex-shrink-0 text-xs text-custom-text-200">
+                          {currentProjectDetails?.identifier}-{issue.sequence_id}
+                        </span>
+                      </Tooltip>
+                      <Tooltip position="top-left" tooltipHeading="Title" tooltipContent={issue.name}>
+                        <span className="text-[0.825rem] text-custom-text-100">{truncateText(issue.name, 30)}</span>
+                      </Tooltip>
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <StateDropdown
+                        value={issue.state_id ?? undefined}
+                        onChange={() => {}}
+                        projectId={projectId?.toString() ?? ""}
+                        disabled={true}
+                        buttonVariant="background-with-text"
+                      />
+                      {issue.target_date && (
+                        <Tooltip tooltipHeading="Target Date" tooltipContent={renderFormattedDate(issue.target_date)}>
+                          <div className="h-full flex items-center gap-1.5 rounded text-xs px-2 py-0.5 bg-custom-background-80 cursor-not-allowed">
+                            <CalendarCheck className="h-3 w-3 flex-shrink-0" />
+                            <span className="text-xs">{renderFormattedDateWithoutYear(issue.target_date)}</span>
+                          </div>
+                        </Tooltip>
+                      )}
+                    </div>
+                  </Link>
+                ))
+              ) : (
+                <div className="flex items-center justify-center h-full text-sm text-custom-text-200">
+                  There are no high priority issues present in this cycle.
+                </div>
+              )
+            ) : (
+              <Loader className="space-y-3">
+                <Loader.Item height="50px" />
+                <Loader.Item height="50px" />
+                <Loader.Item height="50px" />
+              </Loader>
+            )}
+          </div>
         </div>
-        <div className="flex flex-col justify-between border-custom-border-200 p-4">
+        <div className="flex flex-col  border-custom-border-200 p-4 max-h-60">
           <div className="flex items-start justify-between gap-4 py-1.5 text-xs">
             <div className="flex items-center gap-3 text-custom-text-100">
               <div className="flex items-center justify-center gap-1">
