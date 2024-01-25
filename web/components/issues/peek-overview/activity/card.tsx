@@ -41,13 +41,16 @@ export const IssueActivityCard: FC<IIssueActivityCard> = (props) => {
 
   return (
     <div className="flow-root">
-      <ul role="list" className="-mb-4">
+      {/* FIXME: --issue-detail-- */}
+      {/* <ul role="list" className="-mb-4">
         {issueActivity ? (
           issueActivity.length > 0 &&
           issueActivity.map((activityId, index) => {
             // determines what type of action is performed
             const activityItem = activity.getActivityById(activityId) as IIssueActivity;
-            const message = activityItem.field ? <ActivityMessage activity={activityItem} /> : "created the issue.";
+            const message = activityItem.field ? <ActivityMessage activity={activityItem} /> : <span>
+                          created <IssueLink activity={activity} />
+                        </span>;
 
             if ("field" in activityItem && activityItem.field !== "updated_by") {
               return (
@@ -146,7 +149,7 @@ export const IssueActivityCard: FC<IIssueActivityCard> = (props) => {
             <Loader.Item height="20px" />
           </Loader>
         )}
-      </ul>
+      </ul> */}
     </div>
   );
 };

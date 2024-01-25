@@ -84,7 +84,7 @@ const GroupByKanBan: React.FC<IGroupByKanBan> = observer((props) => {
   const isGroupByCreatedBy = group_by === "created_by";
 
   return (
-    <div className={`relative w-full flex gap-3 overflow-hidden ${sub_group_by ? "h-full" : "h-full"}`}>
+    <div className={`relative w-full flex gap-3 ${sub_group_by ? "h-full" : "h-full"}`}>
       {list &&
         list.length > 0 &&
         list.map((_list: IGroupByColumn) => {
@@ -199,7 +199,7 @@ export const KanBan: React.FC<IKanBan> = observer((props) => {
       group_by={group_by}
       sub_group_by={sub_group_by}
       sub_group_id={sub_group_id}
-      isDragDisabled={!issueKanBanView?.canUserDragDrop}
+      isDragDisabled={!issueKanBanView?.getCanUserDragDrop(group_by, sub_group_by)}
       handleIssues={handleIssues}
       quickActions={quickActions}
       kanbanFilters={kanbanFilters}

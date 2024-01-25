@@ -111,11 +111,12 @@ from .inbox import (
     InboxSerializer,
     InboxIssueSerializer,
     IssueStateInboxSerializer,
+    InboxIssueLiteSerializer,
 )
 
 from .analytic import AnalyticViewSerializer
 
-from .notification import NotificationSerializer
+from .notification import NotificationSerializer, UserNotificationPreferenceSerializer
 
 from .exporter import ExporterHistorySerializer
 

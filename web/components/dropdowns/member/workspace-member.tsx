@@ -1,10 +1,12 @@
-import { Fragment, useState } from "react";
+import { Fragment, useRef, useState } from "react";
 import { observer } from "mobx-react-lite";
 import { Combobox } from "@headlessui/react";
 import { usePopper } from "react-popper";
 import { Check, Search } from "lucide-react";
 // hooks
 import { useMember, useUser } from "hooks/store";
+import { useDropdownKeyDown } from "hooks/use-dropdown-key-down";
+import useOutsideClickDetector from "hooks/use-outside-click-detector";
 // components
 import { BackgroundButton, BorderButton, TransparentButton } from "components/dropdowns";
 // icons
@@ -23,14 +25,20 @@ export const WorkspaceMemberDropdown: React.FC<MemberDropdownProps> = observer((
     className = "",
     disabled = false,
     dropdownArrow = false,
+    dropdownArrowClassName = "",
+    hideIcon = false,
     multiple,
     onChange,
     placeholder = "Members",
     placement,
     value,
+    tabIndex,
   } = props;
   // states
   const [query, setQuery] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+  // refs
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
   // popper-js refs
   const [referenceElement, setReferenceElement] = useState<HTMLButtonElement | null>(null);
   const [popperElement, setPopperElement] = useState<HTMLDivElement | null>(null);
@@ -78,13 +86,22 @@ export const WorkspaceMemberDropdown: React.FC<MemberDropdownProps> = observer((
   };
   if (multiple) comboboxProps.multiple = true;
 
+  const openDropdown = () => {
+    setIsOpen(true);
+    if (referenceElement) referenceElement.focus();
+  };
+  const closeDropdown = () => setIsOpen(false);
+  const handleKeyDown = useDropdownKeyDown(openDropdown, closeDropdown, isOpen);
+  useOutsideClickDetector(dropdownRef, closeDropdown);
+
   return (
     <Combobox
       as="div"
-      className={cn("h-full flex-shrink-0", {
-        className,
-      })}
+      ref={dropdownRef}
+      tabIndex={tabIndex}
+      className={cn("h-full", className)}
       {...comboboxProps}
+      handleKeyDown={handleKeyDown}
     >
       <Combobox.Button as={Fragment}>
         {button ? (
@@ -113,6 +130,8 @@ export const WorkspaceMemberDropdown: React.FC<MemberDropdownProps> = observer((
                 userIds={value}
                 className={buttonClassName}
                 dropdownArrow={dropdownArrow && !disabled}
+                dropdownArrowClassName={dropdownArrowClassName}
+                hideIcon={hideIcon}
                 placeholder={placeholder}
               />
             ) : buttonVariant === "border-without-text" ? (
@@ -120,6 +139,8 @@ export const WorkspaceMemberDropdown: React.FC<MemberDropdownProps> = observer((
                 userIds={value}
                 className={buttonClassName}
                 dropdownArrow={dropdownArrow && !disabled}
+                dropdownArrowClassName={dropdownArrowClassName}
+                hideIcon={hideIcon}
                 placeholder={placeholder}
                 hideText
               />
@@ -128,6 +149,8 @@ export const WorkspaceMemberDropdown: React.FC<MemberDropdownProps> = observer((
                 userIds={value}
                 className={buttonClassName}
                 dropdownArrow={dropdownArrow && !disabled}
+                dropdownArrowClassName={dropdownArrowClassName}
+                hideIcon={hideIcon}
                 placeholder={placeholder}
               />
             ) : buttonVariant === "background-without-text" ? (
@@ -135,6 +158,8 @@ export const WorkspaceMemberDropdown: React.FC<MemberDropdownProps> = observer((
                 userIds={value}
                 className={buttonClassName}
                 dropdownArrow={dropdownArrow && !disabled}
+                dropdownArrowClassName={dropdownArrowClassName}
+                hideIcon={hideIcon}
                 placeholder={placeholder}
                 hideText
               />
@@ -143,6 +168,8 @@ export const WorkspaceMemberDropdown: React.FC<MemberDropdownProps> = observer((
                 userIds={value}
                 className={buttonClassName}
                 dropdownArrow={dropdownArrow && !disabled}
+                dropdownArrowClassName={dropdownArrowClassName}
+                hideIcon={hideIcon}
                 placeholder={placeholder}
               />
             ) : buttonVariant === "transparent-without-text" ? (
@@ -150,6 +177,8 @@ export const WorkspaceMemberDropdown: React.FC<MemberDropdownProps> = observer((
                 userIds={value}
                 className={buttonClassName}
                 dropdownArrow={dropdownArrow && !disabled}
+                dropdownArrowClassName={dropdownArrowClassName}
+                hideIcon={hideIcon}
                 placeholder={placeholder}
                 hideText
               />
@@ -186,6 +215,9 @@ export const WorkspaceMemberDropdown: React.FC<MemberDropdownProps> = observer((
                         active ? "bg-custom-background-80" : ""
                       } ${selected ? "text-custom-text-100" : "text-custom-text-200"}`
                     }
+                    onClick={() => {
+                      if (!multiple) closeDropdown();
+                    }}
                   >
                     {({ selected }) => (
                       <>
