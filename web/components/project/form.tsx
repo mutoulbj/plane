@@ -1,4 +1,4 @@
-import { FC, useEffect } from "react";
+import { FC, useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 // hooks
 import { useApplication, useProject, useWorkspace } from "hooks/store";
@@ -29,6 +29,8 @@ const projectService = new ProjectService();
 
 export const ProjectDetailsForm: FC<IProjectDetailsForm> = (props) => {
   const { project, workspaceSlug, isAdmin } = props;
+  // states
+  const [isLoading, setIsLoading] = useState(false);
   // store hooks
   const {
     eventTracker: { postHogEventTracker },
@@ -45,7 +47,7 @@ export const ProjectDetailsForm: FC<IProjectDetailsForm> = (props) => {
     setValue,
     setError,
     reset,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<IProject>({
     defaultValues: {
       ...project,
@@ -114,6 +116,7 @@ export const ProjectDetailsForm: FC<IProjectDetailsForm> = (props) => {
 
   const onSubmit = async (formData: IProject) => {
     if (!workspaceSlug) return;
+    setIsLoading(true);
 
     const payload: Partial<IProject> = {
       name: formData.name,
@@ -139,6 +142,10 @@ export const ProjectDetailsForm: FC<IProjectDetailsForm> = (props) => {
           else await handleUpdateChange(payload);
         });
     else await handleUpdateChange(payload);
+
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 300);
   };
 
   const currentNetwork = NETWORK_CHOICES.find((n) => n.key === project?.network);
@@ -147,10 +154,10 @@ export const ProjectDetailsForm: FC<IProjectDetailsForm> = (props) => {
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
       <div className="relative mt-6 h-44 w-full">
-        <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/50 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
 
         <img src={watch("cover_image")!} alt={watch("cover_image")!} className="h-44 w-full rounded-md object-cover" />
-        <div className="absolute bottom-4 z-10 flex w-full items-end justify-between gap-3 px-4">
+        <div className="absolute bottom-4 z-5 flex w-full items-end justify-between gap-3 px-4">
           <div className="flex flex-grow gap-3 truncate">
             <div className="flex h-[52px] w-[52px] flex-shrink-0 items-center justify-center rounded-lg bg-custom-background-90">
               <div className="grid h-7 w-7 place-items-center">
@@ -308,8 +315,8 @@ export const ProjectDetailsForm: FC<IProjectDetailsForm> = (props) => {
 
         <div className="flex items-center justify-between py-2">
           <>
-            <Button variant="primary" type="submit" loading={isSubmitting} disabled={!isAdmin}>
-              {isSubmitting ? "Updating" : "Update project"}
+            <Button variant="primary" type="submit" loading={isLoading} disabled={!isAdmin}>
+              {isLoading ? "Updating..." : "Update project"}
             </Button>
             <span className="text-sm italic text-custom-sidebar-text-400">
               Created on {renderFormattedDate(project?.created_at)}
